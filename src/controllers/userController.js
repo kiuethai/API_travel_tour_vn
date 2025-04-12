@@ -83,6 +83,19 @@ const update = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+const requestPasswordReset = async (req, res, next) => {
+  try {
+    const result = await userService.requestPasswordReset(req.body.email)
+    res.status(StatusCodes.OK).json(result)
+  } catch (error) { next(error) }
+}
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const result = await userService.resetPassword(req.body)
+    res.status(StatusCodes.OK).json(result)
+  } catch (error) { next(error) }
+}
 
 export const userController = {
   createNew,
@@ -90,5 +103,7 @@ export const userController = {
   login,
   logout,
   refreshToken,
-  update
+  update,
+  requestPasswordReset,
+  resetPassword
 }

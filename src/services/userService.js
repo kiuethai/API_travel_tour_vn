@@ -165,10 +165,98 @@ const update = async (userId, reqBody, userAvatarFile) => {
     return pickUser(updatedUser)
   } catch (error) { throw error }
 }
+
+const requestPasswordReset = async (email) => {
+  try {
+    // Kiểm tra xem email đã tồn tại trong hệ thống hay chưa
+    const existUser = await userModel.findOneByEmail(email)
+    if (!existUser) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Email không tồn tại trong hệ thống')
+    }
+
+    // Tạo reset token duy nhất
+    const resetToken = uuidv4()
+
+    // Tạo thời gian hết hạn cho token (24 giờ)
+    const resetTokenExpiry = new Date()
+    resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 24)
+
+    // Cập nhật thông tin token vào database
+    await userModel.update(existUser._id, {
+      resetPasswordToken: resetToken,
+      resetPasswordExpiry: resetTokenExpiry
+    })
+
+    // Tạo link reset password
+    const resetLink = `${WEBSITE_DOMAIN}/account/reset-password?email=${email}&token=${resetToken}`
+    const customSubject = 'KTTravel: Yêu cầu đặt lại mật khẩu của bạn'
+    const htmlContent = `
+      <h3>Xin chào,</h3>
+      <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.</p>
+      <p>Nhấp vào liên kết dưới đây để đặt lại mật khẩu:</p>
+      <h3><a href="${resetLink}">Đặt lại mật khẩu</a></h3>
+      <p>Hoặc sao chép liên kết này: ${resetLink}</p>
+      <p>Liên kết này sẽ hết hạn sau 24 giờ.</p>
+      <h3>Trân trọng,<br/> - Kiuethai - Một Lập Trình Viên - </h3>
+    `
+
+    // Gọi provider gửi email
+    await BrevoProvider.sendEmail(email, customSubject, htmlContent)
+
+    return { success: true, message: 'Email đặt lại mật khẩu đã được gửi thành công' }
+  } catch (error) { throw error }
+}
+
+const resetPassword = async (reqBody) => {
+  try {
+    // Kiểm tra user với email
+    const existUser = await userModel.findOneByEmail(reqBody.email)
+    if (!existUser) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Email không tồn tại trong hệ thống')
+    }
+
+    // Kiểm tra token có hợp lệ không
+    if (!existUser.resetPasswordToken || existUser.resetPasswordToken !== reqBody.token) {
+      throw new ApiError(StatusCodes.NOT_ACCEPTABLE, 'Token không hợp lệ')
+    }
+
+    // Kiểm tra token hết hạn chưa
+    const now = new Date()
+    if (!existUser.resetPasswordExpiry || new Date(existUser.resetPasswordExpiry) < now) {
+      throw new ApiError(StatusCodes.NOT_ACCEPTABLE, 'Token đã hết hạn')
+    }
+
+    // Hash password mới và cập nhật
+    const newPasswordHash = bcryptjs.hashSync(reqBody.newPassword, 8)
+
+    // Update user với mật khẩu mới và xóa token
+    const updatedUser = await userModel.update(existUser._id, {
+      password: newPasswordHash,
+      resetPasswordToken: null,
+      resetPasswordExpiry: null
+    })
+
+    // Gửi email thông báo đổi mật khẩu thành công
+    const customSubject = 'KTTravel: Mật khẩu của bạn đã được thay đổi thành công'
+    const htmlContent = `
+      <h3>Xin chào,</h3>
+      <p>Mật khẩu tài khoản của bạn đã được thay đổi thành công.</p>
+      <p>Nếu bạn không thực hiện thay đổi này, vui lòng liên hệ với chúng tôi ngay lập tức.</p>
+      <h3>Trân trọng,<br/> - Kiuethai - Một Lập Trình Viên - </h3>
+    `
+
+    await BrevoProvider.sendEmail(existUser.email, customSubject, htmlContent)
+
+    return { success: true, message: 'Đặt lại mật khẩu thành công', user: pickUser(updatedUser) }
+  } catch (error) { throw error }
+}
+
 export const userService = {
   createNew,
   verifyAccount,
   login,
   refreshToken,
-  update
+  update,
+  requestPasswordReset,
+  resetPassword
 }

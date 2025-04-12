@@ -20,7 +20,6 @@ Router.route('/logout')
 Router.route('/refresh_token')
   .get(userController.refreshToken)
 
-
 Router.route('/update')
   .put(
     authMiddleware.isAuthorized,
@@ -28,4 +27,11 @@ Router.route('/update')
     userValidation.update,
     userController.update
   )
+
+Router.route('/password-reset/request')
+  .post(userValidation.requestPasswordReset, userController.requestPasswordReset)
+
+Router.route('/password-reset/reset')
+  .post(userValidation.resetPassword, userController.resetPassword)
+
 export const userRoute = Router
