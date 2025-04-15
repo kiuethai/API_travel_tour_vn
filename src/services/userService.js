@@ -72,6 +72,7 @@ const verifyAccount = async (reqBody) => {
     return pickUser(updatedUser)
   } catch (error) { throw error }
 }
+
 const login = async (reqBody) => {
   try {
     // Query user trong Database
