@@ -7,16 +7,18 @@ import ApiError from '~/utils/ApiError'
 const isAuthorized = async (req, res, next) => {
   // Lấu accessToken nằm trong request cookies phía client - withCredentials trong file authorizeAxios
   const clientAccessToken = req.cookies?.accessToken
-
+  const adminAccessToken = req.cookies?.adminAccessToken
   // Nếu như cái clientAccessToken không tồn tại thì trả về lỗi luôn
-  if (!clientAccessToken) {
+  if (!clientAccessToken && !adminAccessToken) {
     next(new ApiError(StatusCodes.UNAUTHORIZED, 'Unauthorized! (token not found)'))
     return
   }
 
+  const tokenToVerify = adminAccessToken || clientAccessToken
+
   try {
     // Bước 1: Thực hiện giải mã token xem nó có hợp lệ hay là không
-    const accessTokenDecoded = await JwtProvider.verifyToken(clientAccessToken, env.ACCESS_TOKEN_SECRET_SIGNATURE)
+    const accessTokenDecoded = await JwtProvider.verifyToken(tokenToVerify, env.ACCESS_TOKEN_SECRET_SIGNATURE)
     // console.log('🚀 ~ isAuthorized ~ accessTokenDecoded:', accessTokenDecoded)
 
 
