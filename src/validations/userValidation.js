@@ -51,7 +51,10 @@ const update = async (req, res, next) => {
     new_password: Joi.string().pattern(PASSWORD_RULE).message(`new_password: ${PASSWORD_RULE_MESSAGE}`),
     phoneNumber: Joi.string().pattern(/^[0-9]{10,15}$/).allow(null),
     address: Joi.string().allow(null),
-    ipAddress: Joi.string().allow(null)
+    ipAddress: Joi.string().allow(null),
+    isActive: Joi.boolean(),
+    _destroy: Joi.boolean()
+
   })
   try {
     // Lưu ý đối với trường hợp update, cho phép Unknown để không cần đẩy một số field lên

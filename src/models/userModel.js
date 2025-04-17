@@ -73,11 +73,19 @@ const update = async (userId, updateData) => {
   } catch (error) { throw new Error(error) }
 }
 
+const findAll = async (query) => {
+  try {
+    const result = await GET_DB().collection(USER_COLLECTION_NAME).find(query).toArray()
+    return result
+  } catch (error) { throw new Error(error) }
+}
+
 export const userModel = {
   USER_COLLECTION_NAME,
   USER_COLLECTION_SCHEMA,
   createNew,
   findOneById,
   findOneByEmail,
-  update
+  update,
+  findAll
 }

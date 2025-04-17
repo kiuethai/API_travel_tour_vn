@@ -167,6 +167,24 @@ const update = async (userId, reqBody, userAvatarFile) => {
   } catch (error) { throw error }
 }
 
+const updateById = async (userId, reqBody) => {
+  try {
+    // Query User and validate
+    const existUser = await userModel.findOneById(userId)
+    if (!existUser) throw new ApiError(StatusCodes.NOT_FOUND, 'User not found!')
+
+    // Update only allowed fields (isActive, _destroy)
+    const updateData = {}
+    if (reqBody.isActive !== undefined) updateData.isActive = reqBody.isActive
+    if (reqBody._destroy !== undefined) updateData._destroy = reqBody._destroy
+
+    // Update user in database
+    const updatedUser = await userModel.update(existUser._id, updateData)
+
+    return pickUser(updatedUser)
+  } catch (error) { throw error }
+}
+
 const requestPasswordReset = async (email) => {
   try {
     // Kiểm tra xem email đã tồn tại trong hệ thống hay chưa
@@ -252,12 +270,23 @@ const resetPassword = async (reqBody) => {
   } catch (error) { throw error }
 }
 
+const getAllUsers = async () => {
+  try {
+    const allUsers = await userModel.findAll({ _destroy: false })
+    return allUsers.map((user) => pickUser(user))
+  } catch (error) {
+    throw error
+  }
+}
+
 export const userService = {
   createNew,
   verifyAccount,
   login,
   refreshToken,
   update,
+  updateById,
   requestPasswordReset,
-  resetPassword
+  resetPassword,
+  getAllUsers
 }

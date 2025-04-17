@@ -28,10 +28,20 @@ Router.route('/update')
     userController.update
   )
 
+Router.route('/:id')
+  .put(
+    authMiddleware.isAuthorized,
+    userValidation.update,
+    userController.updateById
+  )
+
 Router.route('/password-reset/request')
   .post(userValidation.requestPasswordReset, userController.requestPasswordReset)
 
 Router.route('/password-reset/reset')
   .post(userValidation.resetPassword, userController.resetPassword)
+
+Router.route('/getAllUsers')
+  .get(authMiddleware.isAuthorized, userController.getAllUsers)
 
 export const userRoute = Router

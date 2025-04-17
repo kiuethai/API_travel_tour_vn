@@ -83,6 +83,14 @@ const update = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+const updateById = async (req, res, next) => {
+  try {
+    const userId = req.params.id
+    const updatedUser = await userService.updateById(userId, req.body)
+    res.status(StatusCodes.OK).json(updatedUser)
+  } catch (error) { next(error) }
+}
+
 const requestPasswordReset = async (req, res, next) => {
   try {
     const result = await userService.requestPasswordReset(req.body.email)
@@ -97,6 +105,13 @@ const resetPassword = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+const getAllUsers = async (req, res, next) => {
+  try {
+    const users = await userService.getAllUsers()
+    res.status(StatusCodes.OK).json(users)
+  } catch (error) { next(error) }
+}
+
 export const userController = {
   createNew,
   verifyAccount,
@@ -104,6 +119,8 @@ export const userController = {
   logout,
   refreshToken,
   update,
+  updateById,
   requestPasswordReset,
-  resetPassword
+  resetPassword,
+  getAllUsers
 }
