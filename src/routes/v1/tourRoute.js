@@ -1,0 +1,42 @@
+import express from 'express'
+import { tourValidation } from '~/validations/tourValidation'
+import { tourController } from '~/controllers/tourController'
+import { authMiddleware } from '~/middlewares/authMiddleware'
+import { multerUploadMiddleware } from '~/middlewares/multerUploadMiddleware'
+
+const Router = express.Router()
+
+// Get all tours - public access
+Router.route('/getAllTours')
+  .get(tourController.getAllTours)
+
+// Get tour by ID
+Router.route('/:id')
+  .get(tourController.getTourById)
+
+// Add new tour - admin access required
+Router.route('/addTour')
+  .post(
+    authMiddleware.isAuthorized,
+    multerUploadMiddleware.upload.array('images', 5),
+    tourValidation.createNew,
+    tourController.addTour
+  )
+
+// Update tour - admin access required
+Router.route('/updateTour/:id')
+  .put(
+    authMiddleware.isAuthorized,
+    tourValidation.createNew,
+    tourController.updateTour
+  )
+
+// Add itinerary to tour
+Router.route('/:id/itinerary')
+  .post(
+    authMiddleware.isAuthorized,
+    tourValidation.updateItinerary,
+    tourController.addItinerary
+  )
+
+export const tourRoute = Router

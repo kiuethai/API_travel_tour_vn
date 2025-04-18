@@ -1,0 +1,102 @@
+/* eslint-disable no-useless-catch */
+import { tourModel } from '~/models/tourModel'
+import ApiError from '~/utils/ApiError'
+import { StatusCodes } from 'http-status-codes'
+import { CloudinaryProvider } from '~/providers/CloudinaryProvider'
+
+const addTour = async (reqBody, tourImagesFiles) => {
+  try {
+    // Kiểm tra xem có đủ ít nhất 5 hình ảnh không
+    if (!tourImagesFiles || tourImagesFiles.length < 5) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Cần ít nhất 5 hình ảnh cho tour')
+    }
+
+    // Tạo dữ liệu tour cơ bản
+    const newTour = {
+      title: reqBody.title,
+      description: reqBody.description,
+      images: [], // Sẽ được cập nhật với URL của hình ảnh tải lên
+      quantity: parseInt(reqBody.quantity),
+      domain: reqBody.domain,
+      priceAdult: parseFloat(reqBody.priceAdult),
+      priceChild: parseFloat(reqBody.priceChild),
+      destination: reqBody.destination,
+      availability: reqBody.availability !== undefined ? reqBody.availability : false, // Default to false
+      itinerary: reqBody.itinerary || [],
+      startDate: reqBody.startDate, // Now handled by the model
+      endDate: reqBody.endDate // Now handled by the model
+    }
+
+    // Upload hình ảnh lên Cloudinary
+    const uploadPromises = tourImagesFiles.map(file =>
+      CloudinaryProvider.streamUpload(file.buffer, 'tours')
+    )
+
+    const uploadedImages = await Promise.all(uploadPromises)
+    newTour.images = uploadedImages.map(img => img.secure_url)
+
+    // Lưu tour vào database
+    const createdTour = await tourModel.createNew(newTour)
+    const tourDetails = await tourModel.findOneById(createdTour.insertedId)
+
+    return tourDetails
+  } catch (error) { throw error }
+}
+
+const getAllTours = async () => {
+  try {
+    const tours = await tourModel.findAll()
+    return tours
+  } catch (error) { throw error }
+}
+
+const getTourById = async (tourId) => {
+  try {
+    const tour = await tourModel.findOneById(tourId)
+    if (!tour) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Tour không tồn tại')
+    }
+    return tour
+  } catch (error) { throw error }
+}
+
+const updateTour = async (tourId, updateData) => {
+  try {
+    // Kiểm tra xem tour có tồn tại không
+    const existingTour = await tourModel.findOneById(tourId)
+    if (!existingTour) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Tour không tồn tại')
+    }
+
+    // Kiểm tra nếu tour đã hoặc đang diễn ra
+    if (new Date(existingTour.startDate) <= new Date()) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Không thể chỉnh sửa vì tour đã hoặc đang diễn ra')
+    }
+
+    // Cập nhật tour
+    const updatedTour = await tourModel.update(tourId, updateData)
+    return updatedTour
+  } catch (error) { throw error }
+}
+
+const addItinerary = async (tourId, itineraries) => {
+  try {
+    // Kiểm tra xem tour có tồn tại không
+    const existingTour = await tourModel.findOneById(tourId)
+    if (!existingTour) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Tour không tồn tại')
+    }
+
+    // Cập nhật itinerary và đặt availability thành true
+    const updatedTour = await tourModel.updateItinerary(tourId, itineraries)
+    return updatedTour
+  } catch (error) { throw error }
+}
+
+export const tourService = {
+  addTour,
+  getAllTours,
+  getTourById,
+  updateTour,
+  addItinerary
+}
