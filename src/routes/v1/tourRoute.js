@@ -27,7 +27,7 @@ Router.route('/addTour')
 Router.route('/updateTour/:id')
   .put(
     authMiddleware.isAuthorized,
-    tourValidation.createNew,
+    tourValidation.updateTour,
     tourController.updateTour
   )
 

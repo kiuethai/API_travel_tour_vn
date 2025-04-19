@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb'
 import { GET_DB } from '~/config/mongodb'
 import { OBJECT_ID_RULE, OBJECT_ID_RULE_MESSAGE } from '~/utils/validators'
 import { calculateTourDuration } from '~/utils/dateUtils'
+import { parseDate } from '~/utils/parseDate'
 
 // Define Collection (name & schema)
 const TOUR_COLLECTION_NAME = 'tours'
@@ -48,42 +49,6 @@ const validateBeforeCreate = async (data) => {
   return await TOUR_COLLECTION_SCHEMA.validateAsync(data, { abortEarly: false })
 }
 
-// Hàm phụ trợ để phân tích các định dạng ngày khác nhau
-const parseDate = (dateString) => {
-  if (dateString instanceof Date) return dateString
-
-  // Thử các định dạng ngày khác nhau
-  let date = null
-
-  // Định dạng: DD/MM/YY hoặc YY/MM/DD
-  if (/^\d{2}\/\d{2}\/\d{2}$/.test(dateString)) {
-    // Thử định dạng DD/MM/YY trước
-    const [day, month, year] = dateString.split('/').map(Number)
-    date = new Date(2000 + year, month - 1, day)
-
-    // Nếu ngày không hợp lệ, thử định dạng YY/MM/DD
-    if (isNaN(date.getTime())) {
-      const [year, month, day] = dateString.split('/').map(Number)
-      date = new Date(2000 + year, month - 1, day)
-    }
-  }
-  // Định dạng: DD/MM/YYYY
-  else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
-    const [day, month, year] = dateString.split('/').map(Number)
-    date = new Date(year, month - 1, day)
-  }
-  // Định dạng ISO chuẩn hoặc các định dạng khác
-  else {
-    date = new Date(dateString)
-  }
-
-  // Kiểm tra tính hợp lệ của ngày
-  if (isNaN(date.getTime())) {
-    throw new Error(`Định dạng ngày không hợp lệ: ${dateString}`)
-  }
-
-  return date
-}
 
 const createNew = async (data) => {
   try {
