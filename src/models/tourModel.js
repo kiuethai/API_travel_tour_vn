@@ -139,7 +139,7 @@ const update = async (tourId, updateData) => {
 
     // Đảm bảo itinerary luôn là array trước khi lưu DB
     if (updateData.itinerary) {
-      console.log('Received itinerary:', updateData.itinerary);
+      // console.log('Received itinerary:', updateData.itinerary);
       if (typeof updateData.itinerary === 'string') {
         try {
           const parsed = JSON.parse(updateData.itinerary)
