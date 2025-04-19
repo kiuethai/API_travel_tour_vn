@@ -11,6 +11,18 @@ const addTour = async (reqBody, tourImagesFiles) => {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'Cần ít nhất 5 hình ảnh cho tour')
     }
 
+    // Đảm bảo itinerary luôn là array trước khi lưu DB
+    let itinerary = reqBody.itinerary
+    if (typeof itinerary === 'string') {
+      try {
+        itinerary = JSON.parse(itinerary)
+        if (!Array.isArray(itinerary)) itinerary = []
+      } catch {
+        itinerary = []
+      }
+    }
+    if (!Array.isArray(itinerary)) itinerary = []
+
     // Tạo dữ liệu tour cơ bản
     const newTour = {
       title: reqBody.title,
@@ -22,7 +34,7 @@ const addTour = async (reqBody, tourImagesFiles) => {
       priceChild: parseFloat(reqBody.priceChild),
       destination: reqBody.destination,
       availability: reqBody.availability !== undefined ? reqBody.availability : false, // Default to false
-      itinerary: reqBody.itinerary || [],
+      itinerary, // always array
       startDate: reqBody.startDate, // Now handled by the model
       endDate: reqBody.endDate // Now handled by the model
     }

@@ -179,91 +179,45 @@ const updateItinerary = async (req, res, next) => {
 }
 
 
+const correctCondition = Joi.object({
+  title: Joi.string(),
+  description: Joi.string(),
+  quantity: Joi.number().integer().min(0),
+  domain: Joi.string(),
+  priceAdult: Joi.number().min(0),
+  priceChild: Joi.number().min(0),
+  destination: Joi.string(),
+  availability: Joi.boolean(),
+  startDate: Joi.date(),
+  endDate: Joi.date(),
+  itinerary: Joi.array().items(
+    Joi.object({
+      day: Joi.number().integer().min(1),
+      title: Joi.string(),
+      description: Joi.string(),
+    })
+  ),
+});
+
 const updateTour = async (req, res, next) => {
-  const correctCondition = Joi.object({
-    title: Joi.string().trim().max(255),
-    description: Joi.string().trim(),
-    quantity: Joi.number().integer().min(0).messages({
-      'number.base': 'Quantity must be a number',
-      'number.min': 'Quantity must not be negative'
-    }),
-    domain: Joi.string().messages({
-      'string.empty': 'Domain is required'
-    }),
-    priceAdult: Joi.number().min(0).messages({
-      'number.base': 'Adult price must be a number',
-      'number.min': 'Adult price must not be negative'
-    }),
-    priceChild: Joi.number().min(0).messages({
-      'number.base': 'Child price must be a number',
-      'number.min': 'Child price must not be negative'
-    }),
-    destination: Joi.string().messages({
-      'string.empty': 'Destination is required'
-    }),
-    availability: Joi.boolean(),
-    itinerary: Joi.alternatives().try(
-      Joi.array().length(0),
-      Joi.array().items(Joi.object({
-        day: Joi.number(),
-        title: Joi.string(),
-        description: Joi.string().allow('').default('')
-      }))
-    ).default([]),
-    startDate: Joi.alternatives().try(
-      Joi.date(),
-      Joi.string().custom((value, helpers) => {
-        const date = parseDate(value)
-        if (!date) return helpers.error('any.invalid')
-        return date
-      })
-    ).messages({
-      'any.required': 'Start date is required',
-      'any.invalid': 'Start date must be a valid date format (DD/MM/YYYY, YY/MM/DD, etc.)'
-    }),
-    endDate: Joi.alternatives().try(
-      Joi.date(),
-      Joi.string().custom((value, helpers) => {
-        const date = parseDate(value)
-        if (!date) return helpers.error('any.invalid')
-        return date
-      })
-    ).messages({
-      'any.required': 'End date is required',
-      'any.invalid': 'End date must be a valid date format (DD/MM/YYYY, YY/MM/DD, etc.)'
-    }),
-    _destroy: Joi.boolean()
-  })
-
-  try {
-    // Đảm bảo itinerary luôn là một mảng
-    if (req.body.itinerary === undefined) {
-      req.body.itinerary = [];
-    }
-    else if (!Array.isArray(req.body.itinerary) && typeof req.body.itinerary !== 'string') {
-      req.body.itinerary = [];
-    }
-
-    // Process itinerary from JSON string if needed
-    if (req.body.itinerary && typeof req.body.itinerary === 'string') {
-      try {
-        req.body.itinerary = JSON.parse(req.body.itinerary);
-        // Kiểm tra sau khi parse có phải là array không
-        if (!Array.isArray(req.body.itinerary)) {
-          req.body.itinerary = [];
-        }
-      } catch (error) {
-        // Nếu parse lỗi, gán mảng rỗng thay vì ném lỗi
-        req.body.itinerary = [];
-      }
-    }
-
-    await correctCondition.validateAsync(req.body, { abortEarly: false })
-    next()
-  } catch (error) {
-    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
+  // Ép kiểu các trường số và boolean nếu là string (do FE gửi FormData)
+  if (typeof req.body.quantity === 'string') req.body.quantity = Number(req.body.quantity);
+  if (typeof req.body.priceAdult === 'string') req.body.priceAdult = Number(req.body.priceAdult);
+  if (typeof req.body.priceChild === 'string') req.body.priceChild = Number(req.body.priceChild);
+  if (typeof req.body.availability === 'string') {
+    req.body.availability = req.body.availability === 'true' || req.body.availability === '1';
   }
-}
+  // Loại bỏ trường không mong muốn để tránh lỗi "is not allowed"
+  delete req.body.existingImages;
+
+  // console.log('REQ BODY:', req.body)
+  try {
+    await correctCondition.validateAsync(req.body, { abortEarly: false });
+    next();
+  } catch (error) {
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message));
+  }
+};
 
 
 export const tourValidation = {

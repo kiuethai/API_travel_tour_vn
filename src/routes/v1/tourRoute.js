@@ -23,13 +23,16 @@ Router.route('/addTour')
     tourController.addTour
   )
 
-// Update tour - admin access required
+const multer = require('multer');
+const upload = multer();
+
 Router.route('/updateTour/:id')
   .put(
     authMiddleware.isAuthorized,
+    upload.none(), // hoặc upload.single('images') nếu có file
     tourValidation.updateTour,
     tourController.updateTour
-  )
+  );
 
 // Add itinerary to tour
 Router.route('/:id/itinerary')

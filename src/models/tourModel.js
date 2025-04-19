@@ -92,6 +92,16 @@ const findOneById = async (tourId) => {
       _id: new ObjectId(tourId),
       _destroy: false
     })
+    // Đảm bảo itinerary luôn là array khi trả về
+    if (result && typeof result.itinerary === 'string') {
+      try {
+        result.itinerary = JSON.parse(result.itinerary)
+        if (!Array.isArray(result.itinerary)) result.itinerary = []
+      } catch {
+        result.itinerary = []
+      }
+    }
+    if (result && !Array.isArray(result.itinerary)) result.itinerary = []
     return result
   } catch (error) { throw new Error(error) }
 }
@@ -102,6 +112,18 @@ const findAll = async () => {
       .find({ _destroy: false })
       .sort({ createdAt: -1 })
       .toArray()
+    // Đảm bảo itinerary luôn là array khi trả về
+    result.forEach(tour => {
+      if (tour && typeof tour.itinerary === 'string') {
+        try {
+          tour.itinerary = JSON.parse(tour.itinerary)
+          if (!Array.isArray(tour.itinerary)) tour.itinerary = []
+        } catch {
+          tour.itinerary = []
+        }
+      }
+      if (tour && !Array.isArray(tour.itinerary)) tour.itinerary = []
+    })
     return result
   } catch (error) { throw new Error(error) }
 }
@@ -114,6 +136,21 @@ const update = async (tourId, updateData) => {
         delete updateData[fieldName]
       }
     })
+
+    // Đảm bảo itinerary luôn là array trước khi lưu DB
+    if (updateData.itinerary) {
+      console.log('Received itinerary:', updateData.itinerary);
+      if (typeof updateData.itinerary === 'string') {
+        try {
+          const parsed = JSON.parse(updateData.itinerary)
+          updateData.itinerary = Array.isArray(parsed) ? parsed : []
+        } catch {
+          updateData.itinerary = []
+        }
+      } else if (!Array.isArray(updateData.itinerary)) {
+        updateData.itinerary = []
+      }
+    }
 
     // Xử lý ngày tháng
     if (updateData.startDate) {
