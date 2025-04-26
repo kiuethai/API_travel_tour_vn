@@ -4,6 +4,7 @@ import { userRoute } from '~/routes/v1/userRoute'
 import { adminRoute } from '~/routes/v1/adminRoute'
 import { tourRoute } from '~/routes/v1/tourRoute'
 import { dashboardRoute } from '~/routes/v1/dashboardRoute'
+import { bookingRoute } from './bookingRoute'
 
 const Router = express.Router()
 /** Check APIS V1/status**/
@@ -22,5 +23,8 @@ Router.use('/tours', tourRoute)
 
 /* Dashboard APIs */
 Router.use('/dashboard', dashboardRoute)
+
+/* Booking APIs */
+Router.use('/booking', bookingRoute)
 
 export const APIs_V1 = Router

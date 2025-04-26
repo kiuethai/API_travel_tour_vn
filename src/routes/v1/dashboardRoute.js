@@ -11,7 +11,7 @@ const Router = express.Router()
 Router.get('/summary', authMiddleware.isAuthorized, dashboardController.getSummary)
 
 // Use the correct middleware - isAuthorized instead of verifyAdminToken
-Router.get('/domain_values', authMiddleware.isAuthorized, dashboardController.getValueDomain)
+Router.get('/domain_values', dashboardController.getValueDomain)
 
 // Keep other routes commented out until they are implemented
 // Router.get('/payment-status', authMiddleware.isAuthorized, dashboardController.getPaymentStatus)
