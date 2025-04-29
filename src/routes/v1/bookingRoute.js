@@ -20,4 +20,9 @@ Router.route('/check')
     bookingController.checkBooking
   )
 
+
+Router.route('/payment/paypal')
+  .get(
+    bookingController.paypalBooking
+  )
 export const bookingRoute = Router

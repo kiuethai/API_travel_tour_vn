@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { bookingService } from '~/services/bookingService'
 import { checkoutService } from '~/services/checkoutService'
 import { tourService } from '~/services/tourService'
-
+import { env } from '~/config/environment'
 // POST /booking
 const createBooking = async (req, res, next) => {
   try {
@@ -86,7 +86,15 @@ const checkBooking = async (req, res, next) => {
   }
 }
 
+const paypalBooking = async (req, res) => {
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data_paypal: env.PAYPAL_CLIENT_ID
+  })
+}
+
 export const bookingController = {
   createBooking,
-  checkBooking
+  checkBooking,
+  paypalBooking
 }
