@@ -3,6 +3,8 @@ import { bookingService } from '~/services/bookingService'
 import { checkoutService } from '~/services/checkoutService'
 import { tourService } from '~/services/tourService'
 import { env } from '~/config/environment'
+import { ObjectId } from 'mongodb'
+
 // POST /booking
 const createBooking = async (req, res, next) => {
   try {
@@ -93,8 +95,49 @@ const paypalBooking = async (req, res) => {
   })
 }
 
+// GET /booking/getAllTour
+const getAllToursBooking = async (req, res, next) => {
+  try {
+    // Sử dụng tourService có sẵn để lấy tất cả tour
+    const tours = await bookingService.getAllToursBooking()
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      tours: tours
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+// GET /booking/getUserTours/:userId
+const getTourByUserId = async (req, res, next) => {
+  try {
+    const { userId } = req.params
+
+    // Validate userId là MongoDB ObjectId hợp lệ
+    if (!ObjectId.isValid(userId)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: 'User ID không hợp lệ'
+      })
+    }
+
+    // Lấy danh sách tour mà người dùng đã đặt
+    const userTours = await bookingService.getUserTours(userId)
+
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      tours: userTours
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const bookingController = {
   createBooking,
   checkBooking,
-  paypalBooking
+  paypalBooking,
+  getAllToursBooking,
+  getTourByUserId
 }

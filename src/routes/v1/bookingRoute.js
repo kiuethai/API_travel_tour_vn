@@ -20,9 +20,23 @@ Router.route('/check')
     bookingController.checkBooking
   )
 
-
 Router.route('/payment/paypal')
   .get(
     bookingController.paypalBooking
   )
+
+// Lấy tất cả các tour trong hệ thống
+Router.route('/getAllTourBooking')
+  .get(
+    authMiddleware.isAuthorized,
+    bookingController.getAllToursBooking
+  )
+
+// Lấy các tour mà người dùng đã đặt dựa vào userId
+Router.route('/getUserTours/:userId')
+  .get(
+    authMiddleware.isAuthorized,
+    bookingController.getTourByUserId
+  )
+
 export const bookingRoute = Router

@@ -77,11 +77,37 @@ const update = async (bookingId, updateData) => {
   } catch (error) { throw new Error(error) }
 }
 
+const findAll = async () => {
+  try {
+    const result = await GET_DB().collection(BOOKING_COLLECTION_NAME).find({ _destroy: false }).toArray()
+    return result
+  } catch (error) { throw new Error(error) }
+}
+
+
+/**
+ * Tìm tất cả booking của một user cụ thể
+ * @param {string} userId - ID của user
+ * @returns {Array} - Danh sách các booking
+ */
+const findBookingsByUserId = async (userId) => {
+  try {
+    const result = await GET_DB().collection(BOOKING_COLLECTION_NAME).find({
+      userId: userId,
+      _destroy: false
+    }).sort({ createdAt: -1 }).toArray()
+
+    return result
+  } catch (error) { throw new Error(error) }
+}
+
 export const bookingModel = {
   BOOKING_COLLECTION_NAME,
   BOOKING_COLLECTION_SCHEMA,
   createNew,
   findOneById,
   checkBooking,
-  update
+  update,
+  findAll,
+  findBookingsByUserId
 }
