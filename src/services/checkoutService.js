@@ -2,7 +2,7 @@
 import { checkoutModel } from '~/models/checkoutModel'
 import ApiError from '~/utils/ApiError'
 import { StatusCodes } from 'http-status-codes'
-import { ObjectId } from 'mongodb'
+import { ObjectId } from 'mongodb/lib/bson'
 
 const createCheckout = async (checkoutData) => {
   try {

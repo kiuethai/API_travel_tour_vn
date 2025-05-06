@@ -3,7 +3,7 @@ import ApiError from '~/utils/ApiError'
 import { StatusCodes } from 'http-status-codes'
 import { OBJECT_ID_RULE, OBJECT_ID_RULE_MESSAGE } from '~/utils/validators'
 import { tourModel } from '~/models/tourModel'
-import { ObjectId } from 'mongodb'
+import { ObjectId } from 'mongodb/lib/bson'
 import { parseDate } from '~/utils/parseDate'
 
 const createNew = async (req, res, next) => {

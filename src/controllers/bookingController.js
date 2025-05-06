@@ -3,7 +3,7 @@ import { bookingService } from '~/services/bookingService'
 import { checkoutService } from '~/services/checkoutService'
 import { tourService } from '~/services/tourService'
 import { env } from '~/config/environment'
-import { ObjectId } from 'mongodb'
+import { ObjectId } from 'mongodb/lib/bson'
 
 // POST /booking
 const createBooking = async (req, res, next) => {

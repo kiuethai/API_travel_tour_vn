@@ -1,5 +1,5 @@
-import Joi from 'joi'
-import { ObjectId } from 'mongodb'
+import Joi from 'joi/lib/index'
+import { ObjectId } from 'mongodb/lib/bson'
 import { GET_DB } from '~/config/mongodb'
 import { OBJECT_ID_RULE, OBJECT_ID_RULE_MESSAGE } from '~/utils/validators'
 

@@ -2,7 +2,7 @@
 import { bookingModel } from '~/models/bookingModel'
 import ApiError from '~/utils/ApiError'
 import { StatusCodes } from 'http-status-codes'
-import { ObjectId } from 'mongodb'
+import { ObjectId } from 'mongodb/lib/bson'
 import { tourModel } from '~/models/tourModel'
 
 const createBooking = async (bookingData) => {
