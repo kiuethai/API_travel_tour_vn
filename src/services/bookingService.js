@@ -4,7 +4,8 @@ import ApiError from '~/utils/ApiError'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb/lib/bson'
 import { tourModel } from '~/models/tourModel'
-
+import { checkoutModel } from '~/models/checkoutModel' // Thêm dòng này
+import { GET_DB } from '~/config/mongodb'
 const createBooking = async (bookingData) => {
   try {
     // Validate tour ID
@@ -36,42 +37,55 @@ const checkBooking = async (tourId, userId) => {
 
 const getAllToursBooking = async () => {
   try {
-    // Lấy tất cả bookings từ database
     const bookings = await bookingModel.findAll()
-
-    // Nếu không có booking nào, trả về mảng rỗng
     if (!bookings || bookings.length === 0) {
       return []
     }
-    // Trả về dữ liệu bookings trực tiếp
-    return bookings
+
+    // Lấy paymentMethod từ checkout theo bookingId
+    const bookingsWithPayment = await Promise.all(
+      bookings.map(async (booking) => {
+        let paymentMethod = null
+        try {
+          // Tìm checkout theo bookingId
+          const checkout = await checkoutModel.findOneByBookingId
+            ? await checkoutModel.findOneByBookingId(booking._id.toString())
+            : await GET_DB().collection('checkouts').findOne({ bookingId: booking._id.toString() })
+          paymentMethod = checkout?.paymentMethod || null
+        } catch (error) {
+          throw error
+        }
+        return { ...booking, paymentMethod }
+      })
+    )
+    return bookingsWithPayment
   } catch (error) {
     throw error
   }
 }
 
-/**
- * Lấy tất cả các tour mà người dùng đã đặt
- * @param {string} userId - ID của người dùng
- * @returns {Array} - Danh sách các tour đã đặt kèm thông tin đặt tour
- */
 const getUserTours = async (userId) => {
   try {
-    // Lấy tất cả bookings của user từ database
     const bookings = await bookingModel.findBookingsByUserId(userId)
-
-    // Nếu không có booking nào, trả về mảng rỗng
     if (!bookings || bookings.length === 0) {
       return []
     }
 
-    // Lấy chi tiết tour cho mỗi booking
     const toursWithBookingInfo = await Promise.all(
       bookings.map(async (booking) => {
+        let paymentMethod = null
+        try {
+          // Tìm checkout theo bookingId
+          const checkout = await checkoutModel.findOneByBookingId
+            ? await checkoutModel.findOneByBookingId(booking._id.toString())
+            : await GET_DB().collection('checkouts').findOne({ bookingId: booking._id.toString() })
+          paymentMethod = checkout?.paymentMethod || null
+        } catch (error) {
+          throw error
+        }
+
         try {
           const tourDetails = await tourModel.findOneById(booking.tourId)
-
-          // Kết hợp thông tin booking và tour
           return {
             bookingInfo: {
               bookingId: booking._id,
@@ -79,12 +93,16 @@ const getUserTours = async (userId) => {
               status: booking.status,
               adults: booking.numAdults,
               children: booking.numChildren,
-              totalPrice: booking.totalPrice
+              totalPrice: booking.totalPrice,
+              address: booking.address,
+              phoneNumber: booking.phoneNumber,
+              email: booking.email,
+              fullName: booking.fullName,
+              paymentMethod
             },
             tourDetails: tourDetails || { message: 'Tour không còn tồn tại' }
           }
         } catch (error) {
-          // Nếu tour không tồn tại hoặc có lỗi, vẫn trả về thông tin booking
           return {
             bookingInfo: {
               bookingId: booking._id,
@@ -92,7 +110,8 @@ const getUserTours = async (userId) => {
               status: booking.status,
               adults: booking.numAdults,
               children: booking.numChildren,
-              totalPrice: booking.totalPrice
+              totalPrice: booking.totalPrice,
+              paymentMethod
             },
             tourDetails: { message: 'Không thể lấy thông tin tour' }
           }
@@ -105,7 +124,6 @@ const getUserTours = async (userId) => {
     throw error
   }
 }
-
 export const bookingService = {
   createBooking,
   checkBooking,

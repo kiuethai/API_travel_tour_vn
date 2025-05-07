@@ -69,7 +69,7 @@ const refreshToken = async (req, res, next) => {
 
     res.status(StatusCodes.OK).json(result)
   } catch (error) {
-    next(new ApiError(StatusCodes.UNAUTHORIZED, 'Please Sign In! (Error from refresh Token)'))
+    next(new ApiError(StatusCodes.UNAUTHORIZED, 'Vui lòng đăng nhập! (Lỗi từ mã thông báo làm mới))'))
   }
 }
 

@@ -4,6 +4,7 @@ import { checkoutService } from '~/services/checkoutService'
 import { tourService } from '~/services/tourService'
 import { env } from '~/config/environment'
 import { ObjectId } from 'mongodb/lib/bson'
+import axios from 'axios'
 
 // POST /booking
 const createBooking = async (req, res, next) => {
@@ -134,10 +135,77 @@ const getTourByUserId = async (req, res, next) => {
   }
 }
 
+export const momoBooking = async (req, res) => {
+  try {
+    // Lấy thông tin từ FE
+    const { amount, orderInfo, redirectUrl } = req.body
+
+    // Validate các trường bắt buộc
+    if (!amount || !orderInfo || !redirectUrl) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Thiếu thông tin thanh toán MoMo!' })
+    }
+
+    const partnerCode = 'MOMO'
+    const accessKey = 'F8BBA842ECF85'
+    const secretkey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz'
+    const requestId = partnerCode + new Date().getTime()
+    const orderId = requestId
+    const ipnUrl = 'http://localhost:8018/api/check-payment'
+    const requestType = 'captureWallet'
+    const extraData = ''
+
+    // Tạo rawSignature
+    const rawSignature =
+      'accessKey=' + accessKey +
+      '&amount=' + amount +
+      '&extraData=' + extraData +
+      '&ipnUrl=' + ipnUrl +
+      '&orderId=' + orderId +
+      '&orderInfo=' + orderInfo +
+      '&partnerCode=' + partnerCode +
+      '&redirectUrl=' + redirectUrl +
+      '&requestId=' + requestId +
+      '&requestType=' + requestType
+    // console.log('rawSignature:', rawSignature)
+    // Tạo signature
+    const crypto = require('crypto')
+    const signature = crypto.createHmac('sha256', secretkey)
+      .update(rawSignature)
+      .digest('hex')
+
+    // Tạo request body
+    const requestBody = {
+      partnerCode,
+      accessKey,
+      requestId,
+      amount,
+      orderId,
+      orderInfo,
+      redirectUrl,
+      ipnUrl,
+      extraData,
+      requestType,
+      signature,
+      lang: 'vi'
+    }
+
+    // Gửi request đến MoMo bằng axios
+    const response = await axios.post('https://test-payment.momo.vn/v2/gateway/api/create', requestBody, {
+      headers: { 'Content-Type': 'application/json' }
+    })
+
+    const data = response.data
+    return res.status(StatusCodes.OK).json(data)
+  } catch (error) {
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Thanh toán MoMo thất bại', error: error.message })
+  }
+}
+
 export const bookingController = {
   createBooking,
   checkBooking,
   paypalBooking,
   getAllToursBooking,
-  getTourByUserId
+  getTourByUserId,
+  momoBooking
 }

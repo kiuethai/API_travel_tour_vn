@@ -1,4 +1,4 @@
-import Joi from 'joi/lib/index'
+import Joi from 'joi'
 import { ObjectId } from 'mongodb/lib/bson'
 import { GET_DB } from '~/config/mongodb'
 import { OBJECT_ID_RULE, OBJECT_ID_RULE_MESSAGE } from '~/utils/validators'
@@ -39,6 +39,12 @@ const findOneById = async (checkoutId) => {
   } catch (error) { throw new Error(error) }
 }
 
+const findOneByBookingId = async (bookingId) => {
+  try {
+    const result = await GET_DB().collection(CHECKOUT_COLLECTION_NAME).findOne({ bookingId })
+    return result
+  } catch (error) { throw new Error(error) }
+}
 const update = async (checkoutId, updateData) => {
   try {
     // Filter fields that can't be updated
@@ -65,5 +71,6 @@ export const checkoutModel = {
   CHECKOUT_COLLECTION_SCHEMA,
   createNew,
   findOneById,
+  findOneByBookingId,
   update
 }

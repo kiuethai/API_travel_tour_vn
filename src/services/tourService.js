@@ -82,7 +82,7 @@ const updateTour = async (tourId, updateData) => {
 
     // Kiểm tra nếu tour đã hoặc đang diễn ra
     if (new Date(existingTour.startDate) <= new Date()) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Không thể chỉnh sửa vì tour đã hoặc đang diễn ra')
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Không thể đặt vì tour đã hoặc đang diễn ra')
     }
 
     // Cập nhật tour

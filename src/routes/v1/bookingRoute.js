@@ -25,6 +25,11 @@ Router.route('/payment/paypal')
     bookingController.paypalBooking
   )
 
+Router.route('/payment/momo')
+  .post(
+    bookingController.momoBooking
+  )
+
 // Lấy tất cả các tour trong hệ thống
 Router.route('/getAllTourBooking')
   .get(
