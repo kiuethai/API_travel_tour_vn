@@ -37,6 +37,12 @@ Router.route('/getAllTourBooking')
     bookingController.getAllToursBooking
   )
 
+Router.route('/updateBooking/:id')
+  .put(
+    authMiddleware.isAuthorized,
+    bookingController.updateBooking
+  )
+
 // Lấy các tour mà người dùng đã đặt dựa vào userId
 Router.route('/getUserTours/:userId')
   .get(

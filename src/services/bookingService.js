@@ -35,6 +35,7 @@ const checkBooking = async (tourId, userId) => {
 }
 
 
+// ...existing code...
 const getAllToursBooking = async () => {
   try {
     const bookings = await bookingModel.findAll()
@@ -42,23 +43,38 @@ const getAllToursBooking = async () => {
       return []
     }
 
-    // Lấy paymentMethod từ checkout theo bookingId
-    const bookingsWithPayment = await Promise.all(
+    // Lấy paymentMethod, paymentStatus từ checkout và title từ tour
+    const bookingsWithDetails = await Promise.all(
       bookings.map(async (booking) => {
         let paymentMethod = null
+        let paymentStatus = null
+        let tourTitle = null
         try {
-          // Tìm checkout theo bookingId
+          // Lấy thông tin checkout
           const checkout = await checkoutModel.findOneByBookingId
             ? await checkoutModel.findOneByBookingId(booking._id.toString())
             : await GET_DB().collection('checkouts').findOne({ bookingId: booking._id.toString() })
           paymentMethod = checkout?.paymentMethod || null
+          paymentStatus = checkout?.paymentStatus || null
         } catch (error) {
-          throw error
+          // Bỏ qua lỗi checkout
         }
-        return { ...booking, paymentMethod }
+        try {
+          // Lấy thông tin tour
+          const tour = await tourModel.findOneById(booking.tourId)
+          tourTitle = tour?.title || null
+        } catch (error) {
+          // Bỏ qua lỗi tour
+        }
+        return {
+          ...booking,
+          paymentMethod,
+          paymentStatus,
+          tourTitle
+        }
       })
     )
-    return bookingsWithPayment
+    return bookingsWithDetails
   } catch (error) {
     throw error
   }
@@ -124,9 +140,31 @@ const getUserTours = async (userId) => {
     throw error
   }
 }
+
+const updateBookingStatus = async (bookingId, status) => {
+  try {
+    const updated = await bookingModel.update(bookingId, { status })
+    return updated
+  } catch (error) {
+    throw error
+  }
+}
+
+const updateCheckoutPaymentStatus = async (bookingId, paymentStatus) => {
+  try {
+    const checkout = await checkoutModel.findOneByBookingId(bookingId)
+    if (checkout) {
+      await checkoutModel.update(checkout._id, { paymentStatus })
+    }
+  } catch (error) {
+    throw error
+  }
+}
 export const bookingService = {
   createBooking,
   checkBooking,
   getAllToursBooking,
-  getUserTours
+  getUserTours,
+  updateBookingStatus,
+  updateCheckoutPaymentStatus,
 }

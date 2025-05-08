@@ -23,8 +23,8 @@ Router.route('/addTour')
     tourController.addTour
   )
 
-const multer = require('multer');
-const upload = multer();
+const multer = require('multer')
+const upload = multer()
 
 Router.route('/updateTour/:id')
   .put(

@@ -200,12 +200,40 @@ export const momoBooking = async (req, res) => {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Thanh toán MoMo thất bại', error: error.message })
   }
 }
+// PUT /booking/updateBooking/:id
+const updateBooking = async (req, res, next) => {
+  try {
+    const bookingId = req.params.id
+    const { status } = req.body
 
+    // Chỉ cho phép cập nhật sang confirmed hoặc completed
+    if (!['confirmed', 'completed'].includes(status)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Trạng thái không hợp lệ' })
+    }
+
+    // Cập nhật trạng thái booking
+    const updatedBooking = await bookingService.updateBookingStatus(bookingId, status)
+
+    // Nếu xác nhận thì cập nhật paymentStatus checkout thành 'y'
+    if (status === 'confirmed') {
+      await bookingService.updateCheckoutPaymentStatus(bookingId, 'y')
+    }
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Cập nhật booking thành công',
+      booking: updatedBooking
+    })
+  } catch (error) {
+    next(error)
+  }
+}
 export const bookingController = {
   createBooking,
   checkBooking,
   paypalBooking,
   getAllToursBooking,
   getTourByUserId,
-  momoBooking
+  momoBooking,
+  updateBooking
 }
