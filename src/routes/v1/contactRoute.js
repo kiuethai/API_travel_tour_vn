@@ -9,4 +9,6 @@ Router.post('/', contactController.contactAdmin)
 Router.post('/reply', contactController.replyUser)
 
 Router.get('/', contactController.getAllContacts)
+
+
 export const contactRoute = Router

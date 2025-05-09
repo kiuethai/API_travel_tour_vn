@@ -200,6 +200,7 @@ export const momoBooking = async (req, res) => {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Thanh toán MoMo thất bại', error: error.message })
   }
 }
+
 // PUT /booking/updateBooking/:id
 const updateBooking = async (req, res, next) => {
   try {
@@ -228,6 +229,31 @@ const updateBooking = async (req, res, next) => {
     next(error)
   }
 }
+
+const getTourByBookingId = async (req, res, next) => {
+  try {
+    const { bookingId } = req.params
+
+    // Validate bookingId là MongoDB ObjectId hợp lệ
+    if (!ObjectId.isValid(bookingId)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: 'Booking ID không hợp lệ'
+      })
+    }
+
+    // Lấy thông tin tour dựa vào bookingId
+    const tour = await bookingService.getTourByBookingId(bookingId)
+
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      tour
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const bookingController = {
   createBooking,
   checkBooking,
@@ -235,5 +261,6 @@ export const bookingController = {
   getAllToursBooking,
   getTourByUserId,
   momoBooking,
-  updateBooking
+  updateBooking,
+  getTourByBookingId
 }

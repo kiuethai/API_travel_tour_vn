@@ -27,6 +27,7 @@ Router.use('/dashboard', dashboardRoute)
 
 /* Booking APIs */
 Router.use('/booking', bookingRoute)
+
 /* Contact APIs */
 Router.use('/contact', contactRoute)
 

@@ -50,4 +50,11 @@ Router.route('/getUserTours/:userId')
     bookingController.getTourByUserId
   )
 
+Router.route('/getTourByBookingId/:bookingId')
+  .get(
+    authMiddleware.isAuthorized,
+    bookingController.getTourByBookingId
+  )
+
+
 export const bookingRoute = Router

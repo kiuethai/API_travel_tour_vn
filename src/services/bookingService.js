@@ -160,6 +160,49 @@ const updateCheckoutPaymentStatus = async (bookingId, paymentStatus) => {
     throw error
   }
 }
+
+const getTourByBookingId = async (bookingId) => {
+  try {
+    const booking = await bookingModel.findOneById(bookingId)
+    if (!booking) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Booking không tồn tại')
+    }
+    const tourDetails = await tourModel.findOneById(booking.tourId)
+    // Lấy paymentMethod từ checkout nếu cần
+    let paymentMethod = null
+    let checkoutId = null
+    try {
+      const checkout = await checkoutModel.findOneByBookingId
+        ? await checkoutModel.findOneByBookingId(booking._id.toString())
+        : await GET_DB().collection('checkouts').findOne({ bookingId: booking._id.toString() })
+      paymentMethod = checkout?.paymentMethod || null
+      checkoutId = checkout?._id || null
+    } catch (error) {
+      // Bỏ qua lỗi checkout
+    }
+    return {
+      bookingInfo: {
+        bookingId: booking._id,
+        bookingDate: booking.createdAt,
+        status: booking.status,
+        adults: booking.numAdults,
+        children: booking.numChildren,
+        totalPrice: booking.totalPrice,
+        address: booking.address,
+        phoneNumber: booking.phoneNumber,
+        email: booking.email,
+        fullName: booking.fullName,
+        paymentMethod,
+        checkoutId
+      },
+      tourDetails: tourDetails || { message: 'Tour không còn tồn tại' }
+    }
+  } catch (error) {
+    throw error
+  }
+}
+
+
 export const bookingService = {
   createBooking,
   checkBooking,
@@ -167,4 +210,5 @@ export const bookingService = {
   getUserTours,
   updateBookingStatus,
   updateCheckoutPaymentStatus,
+  getTourByBookingId
 }
