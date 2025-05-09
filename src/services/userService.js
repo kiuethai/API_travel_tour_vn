@@ -38,11 +38,30 @@ const createNew = async (reqBody) => {
     const verificationLink = `${WEBSITE_DOMAIN}/account/verification?email=${getNewUser.email}&token=${getNewUser.verifyToken}`
     const customSubject = 'KTTravel: Please verify your email before using our services!'
     const htmlContent = `
-      <h3>Here is your verification link:</h3>
-      <h3>${verificationLink}</h3>
-      <h3>Sincerely,<br/> - Kiuethai - Một Lập Trình Viên - </h3>
+      <div style="font-family: Arial, sans-serif; background: #f6f8fa; padding: 24px;">
+        <div style="max-width: 500px; margin: auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 32px;">
+          <div style="text-align:center; margin-bottom: 24px;">
+            <img src="https://res.cloudinary.com/dbkhjufja/image/upload/v1746778897/aycgbvnmphrhmddyjfuw.png" alt="Travel" width="64" />
+            <h2 style="color: #2d8fdd; margin: 16px 0 8px;">Vietnam Travel Tours</h2>
+            <p style="color: #555; font-size: 16px;">Chào mừng bạn đến với KTTravel!</p>
+          </div>
+          <div style="font-size: 16px; color: #333; margin-bottom: 24px;">
+            <p>Xin chào <b>${getNewUser.email}</b>,</p>
+            <p>Vui lòng xác thực tài khoản của bạn bằng cách nhấn vào nút bên dưới:</p>
+            <div style="text-align:center; margin: 32px 0;">
+              <a href="${verificationLink}" style="background: #2d8fdd; color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 18px; display: inline-block;">
+                Xác thực tài khoản
+              </a>
+            </div>
+          </div>
+          <div style="margin-top: 32px; text-align: center; color: #888; font-size: 14px;">
+            <em>Vietnam Travel Tours - Kết nối hành trình, khám phá Việt Nam!</em>
+            <br/>
+            <span style="font-size:12px;">Trân trọng,<br/>- Kiuethai - Một Lập Trình Viên -</span>
+          </div>
+        </div>
+      </div>
     `
-    // Gọi tớ cái Provider gửi mail
     await BrevoProvider.sendEmail(getNewUser.email, customSubject, htmlContent)
 
     // return trả về dữ liệu cho phía d Controller
