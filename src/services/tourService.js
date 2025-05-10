@@ -80,9 +80,22 @@ const updateTour = async (tourId, updateData) => {
       throw new ApiError(StatusCodes.NOT_FOUND, 'Tour không tồn tại')
     }
 
-    // Kiểm tra nếu tour đã hoặc đang diễn ra
-    if (new Date(existingTour.startDate) <= new Date()) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Không thể đặt vì tour đã hoặc đang diễn ra')
+    const now = new Date()
+    const startDate = new Date(existingTour.startDate)
+    const endDate = new Date(existingTour.endDate)
+
+    // Nếu tour đã kết thúc
+    if (now > endDate) {
+      // Cập nhật trạng thái availability = false nếu chưa cập nhật
+      if (existingTour.availability !== false) {
+        await tourModel.update(tourId, { availability: false })
+      }
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Tour đã hoàn thành, không thể cập nhật')
+    }
+
+    // Nếu tour đang diễn ra
+    if (now >= startDate && now <= endDate) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Không thể cập nhật vì tour đang diễn ra')
     }
 
     // Cập nhật tour

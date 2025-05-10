@@ -34,8 +34,6 @@ const checkBooking = async (tourId, userId) => {
   } catch (error) { throw error }
 }
 
-
-// ...existing code...
 const getAllToursBooking = async () => {
   try {
     const bookings = await bookingModel.findAll()

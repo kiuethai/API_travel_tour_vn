@@ -29,14 +29,9 @@ const TOUR_COLLECTION_SCHEMA = Joi.object({
   startDate: Joi.date().required(),
   endDate: Joi.date().required(),
   time: Joi.string().required(), // Format: "X ngày Y đêm"
-  reviews: Joi.array().items(Joi.object({
-    userId: Joi.string().pattern(OBJECT_ID_RULE).message(OBJECT_ID_RULE_MESSAGE),
-    userName: Joi.string().required(),
-    avatar: Joi.string().allow(null).default(null),
-    rating: Joi.number().min(1).max(5).required(),
-    comment: Joi.string().allow('').default(''),
-    createdAt: Joi.date().timestamp('javascript').default(Date.now)
-  })).default([]),
+  reviewsOrderIds: Joi.array().items(
+    Joi.string().pattern(/^[0-9a-fA-F]{24}$/)
+  ).default(null),
   createdAt: Joi.date().timestamp('javascript').default(Date.now),
   updatedAt: Joi.date().timestamp('javascript').default(null),
   _destroy: Joi.boolean().default(false)
@@ -234,6 +229,17 @@ const updateImages = async (tourId, imageUrls) => {
   } catch (error) { throw new Error(error) }
 }
 
+const pushReviewId = async (tourId, reviewId) => {
+  try {
+    const result = await GET_DB().collection(TOUR_COLLECTION_NAME).findOneAndUpdate(
+      { _id: new ObjectId(tourId) },
+      { $push: { reviews: reviewId } },
+      { returnDocument: 'after' }
+    )
+    return result
+  } catch (error) { throw new Error(error) }
+}
+
 export const tourModel = {
   TOUR_COLLECTION_NAME,
   TOUR_COLLECTION_SCHEMA,
@@ -242,5 +248,6 @@ export const tourModel = {
   findAll,
   update,
   updateItinerary,
-  updateImages
+  updateImages,
+  pushReviewId
 }
