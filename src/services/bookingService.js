@@ -171,12 +171,14 @@ const getTourByBookingId = async (bookingId) => {
     // Lấy paymentMethod từ checkout nếu cần
     let paymentMethod = null
     let checkoutId = null
+    let paymentStatus = null
     try {
       const checkout = await checkoutModel.findOneByBookingId
         ? await checkoutModel.findOneByBookingId(booking._id.toString())
         : await GET_DB().collection('checkouts').findOne({ bookingId: booking._id.toString() })
       paymentMethod = checkout?.paymentMethod || null
       checkoutId = checkout?._id || null
+      paymentStatus = checkout?.paymentStatus || null
     } catch (error) {
       // Bỏ qua lỗi checkout
     }
@@ -193,7 +195,8 @@ const getTourByBookingId = async (bookingId) => {
         email: booking.email,
         fullName: booking.fullName,
         paymentMethod,
-        checkoutId
+        checkoutId,
+        paymentStatus
       },
       tourDetails: tourDetails || { message: 'Tour không còn tồn tại' }
     }

@@ -5,6 +5,21 @@ import { tourService } from '~/services/tourService'
 import { env } from '~/config/environment'
 import { ObjectId } from 'mongodb/lib/bson'
 import axios from 'axios'
+import { BrevoProvider } from '~/providers/BrevoProvider'
+
+// Hàm chuyển đổi phương thức thanh toán sang tên hiển thị và logo
+function renderPaymentMethod(method) {
+  switch (method) {
+    case 'momo-payment':
+      return '<img src="https://static.mservice.io/img/logo-momo.png" alt="Momo" width="20" style="vertical-align:middle;margin-right:6px;"> Momo'
+    case 'paypal-payment':
+      return '<img src="https://www.paypalobjects.com/webstatic/icon/pp258.png" alt="PayPal" width="20" style="vertical-align:middle;margin-right:6px;"> PayPal'
+    case 'office-payment':
+      return '<img src="https://cdn-icons-png.flaticon.com/512/1250/1250615.png" alt="Thanh toán tại quầy" width="20" style="vertical-align:middle;margin-right:6px;"> Thanh toán tại quầy'
+    default:
+      return method || ''
+  }
+}
 
 // POST /booking
 const createBooking = async (req, res, next) => {
@@ -254,6 +269,97 @@ const getTourByBookingId = async (req, res, next) => {
   }
 }
 
+
+
+
+const sendInvoiceByBookingId = async (req, res, next) => {
+  try {
+    const { bookingId } = req.params
+
+    // Validate bookingId
+    if (!ObjectId.isValid(bookingId)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: 'Booking ID không hợp lệ'
+      })
+    }
+
+    // Lấy thông tin booking, tour, checkout
+    const bookingData = await bookingService.getTourByBookingId(bookingId)
+    if (!bookingData || !bookingData.bookingInfo || !bookingData.tourDetails) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: 'Không tìm thấy thông tin hóa đơn'
+      })
+    }
+    const { bookingInfo, tourDetails } = bookingData
+
+    // Tính toán chi tiết giá
+    const priceAdult = tourDetails.priceAdult || 0
+    const priceChild = tourDetails.priceChild || 0
+    const numAdults = bookingInfo.adults || 0
+    const numChildren = bookingInfo.children || 0
+    const totalAdult = priceAdult * numAdults
+    const totalChild = priceChild * numChildren
+    const totalPrice = bookingInfo.totalPrice || 0
+
+
+    // Render HTML hóa đơn
+    const invoiceHtml = `
+      <div style="max-width:600px;margin:auto;border:1px solid #eee;border-radius:8px;font-family:Arial,sans-serif;background:#fff;">
+        <div style="background:#1976d2;color:#fff;padding:24px 16px;border-radius:8px 8px 0 0;">
+          <h2 style="margin:0;">HÓA ĐƠN ĐẶT TOUR DU LỊCH</h2>
+          <p style="margin:0;font-size:15px;">Mã hóa đơn: <b>${bookingInfo.bookingId}</b></p>
+        </div>
+        <div style="padding:24px;">
+          <h3 style="margin-top:0;">Thông tin khách hàng</h3>
+          <table style="width:100%;font-size:15px;">
+            <tr><td><b>Họ tên:</b></td><td>${bookingInfo.fullName}</td></tr>
+            <tr><td><b>Email:</b></td><td>${bookingInfo.email}</td></tr>
+            <tr><td><b>Số điện thoại:</b></td><td>${bookingInfo.phoneNumber || ''}</td></tr>
+            <tr><td><b>Địa chỉ:</b></td><td>${bookingInfo.address || ''}</td></tr>
+          </table>
+          <hr style="margin:24px 0;">
+          <h3>Thông tin tour</h3>
+          <table style="width:100%;font-size:15px;">
+            <tr><td><b>Tên tour:</b></td><td>${tourDetails.title || ''}</td></tr>
+            <tr><td><b>Điểm đến:</b></td><td>${tourDetails.destination || ''}</td></tr>
+            <tr><td><b>Ngày khởi hành:</b></td><td>${tourDetails.startDate ? new Date(tourDetails.startDate).toLocaleDateString('vi-VN') : ''}</td></tr>
+            <tr><td><b>Số người lớn:</b></td><td>${numAdults}</td></tr>
+            <tr><td><b>Số trẻ em:</b></td><td>${numChildren}</td></tr>
+            <tr><td><b>Phương thức thanh toán:</b></td><td>${renderPaymentMethod(bookingInfo.paymentMethod)}</td></tr>
+            <tr><td><b>Trạng thái thanh toán:</b></td><td>${bookingInfo.paymentStatus === 'y' ? 'Đã thanh toán' : 'Chưa thanh toán'}</td></tr>
+          </table>
+          <hr style="margin:24px 0;">
+          <h3>Chi tiết thanh toán</h3>
+          <table style="width:100%;font-size:15px;">
+            <tr><td>Tiền người lớn:</td><td align="right">${priceAdult} x ${numAdults} = <b>${totalAdult} vnđ</b></td></tr>
+            <tr><td>Tiền trẻ em:</td><td align="right">${priceChild} x ${numChildren} = <b>${totalChild} vnđ</b></td></tr>
+            <tr><td><b>Tổng cộng:</b></td><td align="right"><b style="color:#1976d2;font-size:18px;">${totalPrice} vnđ</b></td></tr>
+          </table>
+          <p style="margin-top:32px;font-size:14px;color:#888;">Cảm ơn bạn đã đặt tour tại KTTravel!
+          </p>
+          
+        </div>
+      </div>
+    `
+
+    // Gửi email hóa đơn
+    await BrevoProvider.sendEmail(
+      bookingInfo.email,
+      'Hóa đơn đặt tour tại KTTravel',
+      invoiceHtml
+    )
+
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Đã gửi hóa đơn thành công!'
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const bookingController = {
   createBooking,
   checkBooking,
@@ -262,5 +368,6 @@ export const bookingController = {
   getTourByUserId,
   momoBooking,
   updateBooking,
-  getTourByBookingId
+  getTourByBookingId,
+  sendInvoiceByBookingId
 }

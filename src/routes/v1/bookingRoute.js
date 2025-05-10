@@ -56,5 +56,10 @@ Router.route('/getTourByBookingId/:bookingId')
     bookingController.getTourByBookingId
   )
 
+Router.route('/sendInvoice/:bookingId')
+  .post(
+    authMiddleware.isAuthorized,
+    bookingController.sendInvoiceByBookingId
+  )
 
 export const bookingRoute = Router
