@@ -1,8 +1,4 @@
 /* eslint-disable no-console */
-/**
-
- */
-
 import express from 'express'
 import cors from 'cors'
 import { corsOptions } from '~/config/cors'
@@ -27,6 +23,7 @@ const START_SERVER = () => {
 
   // xử lý cors
   app.use(cors(corsOptions))
+
   // Enable req.body json data
   app.use(express.json())
 
@@ -39,7 +36,6 @@ const START_SERVER = () => {
   if (env.BUILD_MODE === 'production') {
     app.listen(process.env.PORT, () => {
       console.log(`3. Production: Hello ${env.AUTHOR}, am running at ${process.env.PORT}`)
-
     })
   } else {
     app.listen(env.LOCAL_DEV_APP_PORT, env.LOCAL_DEV_APP_HOST, () => {
@@ -47,7 +43,6 @@ const START_SERVER = () => {
 
     })
   }
-
 
   exitHook(() => {
     console.log('4. Server is shutting down....')

@@ -139,25 +139,7 @@ const getUserTours = async (userId) => {
   }
 }
 
-const updateBookingStatus = async (bookingId, status) => {
-  try {
-    const updated = await bookingModel.update(bookingId, { status })
-    return updated
-  } catch (error) {
-    throw error
-  }
-}
 
-const updateCheckoutPaymentStatus = async (bookingId, paymentStatus) => {
-  try {
-    const checkout = await checkoutModel.findOneByBookingId(bookingId)
-    if (checkout) {
-      await checkoutModel.update(checkout._id, { paymentStatus })
-    }
-  } catch (error) {
-    throw error
-  }
-}
 
 const getTourByBookingId = async (bookingId) => {
   try {
@@ -203,13 +185,30 @@ const getTourByBookingId = async (bookingId) => {
   }
 }
 
+const updateBooking = async (bookingId, updateFields) => {
+  try {
+    // Cập nhật các trường cho booking
+    const updated = await bookingModel.update(bookingId, updateFields)
+
+    // Nếu có trường status và là 'confirmed' thì cập nhật paymentStatus checkout thành 'y'
+    if (updateFields.status === 'confirmed') {
+      const checkout = await checkoutModel.findOneByBookingId(bookingId)
+      if (checkout) {
+        await checkoutModel.update(checkout._id, { paymentStatus: 'y' })
+      }
+    }
+
+    return updated
+  } catch (error) {
+    throw error
+  }
+}
 
 export const bookingService = {
   createBooking,
   checkBooking,
   getAllToursBooking,
   getUserTours,
-  updateBookingStatus,
-  updateCheckoutPaymentStatus,
-  getTourByBookingId
+  getTourByBookingId,
+  updateBooking
 }

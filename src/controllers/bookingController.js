@@ -220,20 +220,14 @@ export const momoBooking = async (req, res) => {
 const updateBooking = async (req, res, next) => {
   try {
     const bookingId = req.params.id
-    const { status } = req.body
+    const updateFields = req.body // nhận nhiều trường, ví dụ { status, cancelReason, ... }
 
-    // Chỉ cho phép cập nhật sang confirmed hoặc completed
-    if (!['confirmed', 'completed'].includes(status)) {
+    // Nếu có status thì kiểm tra hợp lệ
+    if (updateFields.status && !['confirmed', 'completed', 'pending'].includes(updateFields.status)) {
       return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Trạng thái không hợp lệ' })
     }
 
-    // Cập nhật trạng thái booking
-    const updatedBooking = await bookingService.updateBookingStatus(bookingId, status)
-
-    // Nếu xác nhận thì cập nhật paymentStatus checkout thành 'y'
-    if (status === 'confirmed') {
-      await bookingService.updateCheckoutPaymentStatus(bookingId, 'y')
-    }
+    const updatedBooking = await bookingService.updateBooking(bookingId, updateFields)
 
     res.status(StatusCodes.OK).json({
       success: true,

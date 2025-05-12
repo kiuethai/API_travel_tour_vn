@@ -13,10 +13,10 @@ export const calculateTourDuration = (startDate, endDate) => {
   const timeDiff = Math.abs(end.getTime() - start.getTime())
 
   // Chuyển đổi mili giây thành ngày
-  const days = Math.ceil(timeDiff / (1000 * 3600 * 24))
+  const days = Math.ceil(timeDiff / (1000 * 3600 * 24)) - 1
 
   // Số đêm = số ngày - 1
-  const nights = days - 1
+  const nights = days - 2
 
   // Trả về chuỗi theo định dạng "X ngày Y đêm"
   return `${days} ngày ${nights} đêm`

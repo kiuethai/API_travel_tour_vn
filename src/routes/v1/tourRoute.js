@@ -18,7 +18,7 @@ Router.route('/:id')
 Router.route('/addTour')
   .post(
     authMiddleware.isAuthorized,
-    multerUploadMiddleware.upload.array('images', 5),
+    multerUploadMiddleware.upload.array('images', 10),
     tourValidation.createNew,
     tourController.addTour
   )
