@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { tourService } from '~/services/tourService'
+import { reviewService } from '~/services/reviewService'
 
 const addTour = async (req, res, next) => {
   try {
@@ -21,8 +22,26 @@ const addTour = async (req, res, next) => {
 const getAllTours = async (req, res, next) => {
   try {
     const tours = await tourService.getAllTours()
-    res.status(StatusCodes.OK).json(tours)
-  } catch (error) { next(error) }
+
+    const toursWithRatings = await Promise.all(
+      tours.map(async tour => {
+
+        const tourId = tour._id.toString()
+        const reviews = await reviewService.getReviewByTourId(tourId)
+        const totalRating = reviews.reduce((sum, r) => sum + (r.rating || 0), 0)
+        const reviewCount = reviews.length
+        const averageRating = reviewCount > 0 ? Number((totalRating / reviewCount).toFixed(1)) : 0
+        return {
+          ...tour,
+          averageRating,
+          reviewCount: reviews.length
+        }
+      })
+    )
+    return res.status(StatusCodes.OK).json(toursWithRatings)
+  } catch (error) {
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ errors: error.message })
+  }
 }
 
 const getTourById = async (req, res, next) => {
@@ -30,10 +49,19 @@ const getTourById = async (req, res, next) => {
     const tourId = req.params.id
     const tour = await tourService.getTourById(tourId)
 
-    res.status(StatusCodes.OK).json({
-      success: true,
-      tour: tour
-    })
+    if (!tour) {
+      return res.status(StatusCodes.NOT_FOUND).json({ errors: 'Tour không tồn tại' })
+    }
+
+    const reviews = await reviewService.getReviewByTourId(req.params.id)
+    const totalRating = reviews.reduce((sum, r) => sum + (r.rating || 0), 0)
+
+    const tourWithRating = {
+      ...tour,
+      totalRating,
+      reviewCount: reviews.length
+    }
+    return res.status(StatusCodes.OK).json(tourWithRating)
   } catch (error) { next(error) }
 }
 

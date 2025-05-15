@@ -101,6 +101,14 @@ const findBookingsByUserId = async (userId) => {
   } catch (error) { throw new Error(error) }
 }
 
+const findOne = async (filter) => {
+  const db = await GET_DB()
+  if (filter.tourID) filter.tourID = new ObjectId(filter.tourID)
+  if (filter.userID) filter.userID = new ObjectId(filter.userID)
+  return db.collection(BOOKING_COLLECTION_NAME).findOne(filter)
+}
+
+
 export const bookingModel = {
   BOOKING_COLLECTION_NAME,
   BOOKING_COLLECTION_SCHEMA,
@@ -109,5 +117,6 @@ export const bookingModel = {
   checkBooking,
   update,
   findAll,
-  findBookingsByUserId
+  findBookingsByUserId,
+  findOne
 }
