@@ -10,6 +10,10 @@ const Router = express.Router()
 Router.route('/getAllTours')
   .get(tourController.getAllTours)
 
+// Recommend tours route - public access
+Router.route('/recommend')
+  .get(tourController.recommendTours)
+
 // Get tour by ID
 Router.route('/:id')
   .get(tourController.getTourById)

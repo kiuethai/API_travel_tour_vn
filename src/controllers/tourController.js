@@ -1,6 +1,9 @@
 import { StatusCodes } from 'http-status-codes'
 import { tourService } from '~/services/tourService'
 import { reviewService } from '~/services/reviewService'
+import { recommendService } from '~/services/recommendService'
+import { JwtProvider } from '~/providers/JwtProvider'
+import { env } from '~/config/environment'
 
 const addTour = async (req, res, next) => {
   try {
@@ -19,7 +22,7 @@ const addTour = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
-const getAllTours = async (req, res, next) => {
+const getAllTours = async (req, res) => {
   try {
     const tours = await tourService.getAllTours()
 
@@ -93,10 +96,56 @@ const addItinerary = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+// Recommend tours based on user context
+const recommendTours = async (req, res, next) => {
+  try {
+    // Try to decode token from cookies to get userId
+    const token = req.cookies?.accessToken || req.cookies?.adminAccessToken
+    let userId
+
+    if (token) {
+      try {
+        const decoded = await JwtProvider.verifyToken(token, env.ACCESS_TOKEN_SECRET_SIGNATURE)
+        userId = decoded._id
+      } catch {
+        userId = null
+      }
+    }
+    const { clickedTourId, search } = req.query
+    const recommendations = await recommendService.getRecommendations({ userId, clickedTourId, searchQuery: search })
+
+
+    const recommendationsfull = await Promise.all(
+      recommendations.map(async rec => {
+        const recId = rec._id.toString()
+        const reviews = await reviewService.getReviewByTourId(recId)
+        const totalRating = reviews.reduce((sum, r) => sum + (r.rating || 0), 0)
+        const reviewCount = reviews.length
+        const averageRating = reviewCount > 0
+          ? Number((totalRating / reviewCount).toFixed(1))
+          : 0
+        return {
+          ...rec,
+          averageRating,
+          reviewCount
+        }
+      }
+      ))
+
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      recommendations: recommendationsfull
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const tourController = {
   addTour,
   getAllTours,
   getTourById,
   updateTour,
-  addItinerary
+  addItinerary,
+  recommendTours
 }

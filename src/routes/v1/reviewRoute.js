@@ -15,13 +15,13 @@ Router.route('/:id')
     // authMiddleware.isAuthorized,
     reviewController.getReviewByTourId
   )
-  // .put(
-  //   authMiddleware.isAuthorized,
-  //   reviewController.updateReview
-  // )
-  // .delete(
-  //   authMiddleware.isAuthorized,
-  //   reviewController.deleteReview
-  // )
+// .put(
+//   authMiddleware.isAuthorized,
+//   reviewController.updateReview
+// )
+// .delete(
+//   authMiddleware.isAuthorized,
+//   reviewController.deleteReview
+// )
 
 export const reviewRoute = Router
