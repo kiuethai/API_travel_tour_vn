@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import express from 'express'
 import cors from 'cors'
+import http from 'http'
 import { corsOptions } from '~/config/cors'
 import { CONNECT_DB, CLOSE_DB } from '~/config/mongodb'
 import exitHook from 'async-exit-hook'
@@ -8,9 +9,14 @@ import { env } from '~/config/environment'
 import { APIs_V1 } from '~/routes/v1'
 import { errorHandlingMiddleware } from '~/middlewares/errorHandlingMiddleware'
 import cookieParser from 'cookie-parser'
+import { setupChatSocket } from './sockets/chatSocket'
 
 const START_SERVER = () => {
   const app = express()
+  const server = http.createServer(app)
+
+  // Set up Socket.IO
+  setupChatSocket(server)
 
   // Fix cái vụ Cache from disk của ExpressJS
   app.use((req, res, next) => {
@@ -32,15 +38,14 @@ const START_SERVER = () => {
 
   // Middleware xử lý lỗi tập trung
   app.use(errorHandlingMiddleware)
-
   if (env.BUILD_MODE === 'production') {
-    app.listen(process.env.PORT, () => {
+    server.listen(process.env.PORT, () => {
       console.log(`3. Production: Hello ${env.AUTHOR}, am running at ${process.env.PORT}`)
     })
   } else {
-    app.listen(env.LOCAL_DEV_APP_PORT, env.LOCAL_DEV_APP_HOST, () => {
+    server.listen(env.LOCAL_DEV_APP_PORT, env.LOCAL_DEV_APP_HOST, () => {
       console.log(`3. Hello ${env.AUTHOR}, test ${env.BUILD_MODE}  I am running at http://${env.LOCAL_DEV_APP_HOST}:${env.LOCAL_DEV_APP_PORT}/`)
-
+      console.log('Socket.IO server is running')
     })
   }
 

@@ -6,24 +6,35 @@ import ApiError from '~/utils/ApiError'
 
 const isAuthorized = async (req, res, next) => {
   // Lấu accessToken nằm trong request cookies phía client - withCredentials trong file authorizeAxios
+  // Try to get token from cookies or Authorization header
   const clientAccessToken = req.cookies?.accessToken
   const adminAccessToken = req.cookies?.adminAccessToken
-  // Nếu như cái clientAccessToken không tồn tại thì trả về lỗi luôn
-  if (!clientAccessToken && !adminAccessToken) {
+  let token = adminAccessToken || clientAccessToken
+  // Fallback to Authorization header Bearer token
+  if (!token) {
+    const authHeader = req.headers.authorization || req.headers.Authorization
+    if (authHeader) {
+      token = authHeader.startsWith('Bearer ')
+        ? authHeader.slice(7)
+        : authHeader
+    }
+  }
+  // No token found
+  if (!token) {
     next(new ApiError(StatusCodes.UNAUTHORIZED, 'Unauthorized! (token not found)'))
     return
   }
 
-  const tokenToVerify = adminAccessToken || clientAccessToken
-
   try {
     // Bước 1: Thực hiện giải mã token xem nó có hợp lệ hay là không
-    const accessTokenDecoded = await JwtProvider.verifyToken(tokenToVerify, env.ACCESS_TOKEN_SECRET_SIGNATURE)
-    // console.log('🚀 ~ isAuthorized ~ accessTokenDecoded:', accessTokenDecoded)
-
-
-    // Bước 2: Quan trọng: Nếu như cái token hợp lệ, thì sẽ cần phải lưu thông tin giải mã được vào cái req.jwtDecoded, để sử dụng cho các tằng cần xử lý ở phía sau
-    req.jwtDecoded = accessTokenDecoded
+    // Verify and decode the access token
+    const decoded = await JwtProvider.verifyToken(token, env.ACCESS_TOKEN_SECRET_SIGNATURE)
+    // Normalize user data for downstream
+    const userId = decoded.id || decoded._id
+    const userRole = decoded.role
+    const userEmail = decoded.email
+    req.jwtDecoded = { id: userId, role: userRole, email: userEmail }
+    req.user = { id: userId, role: userRole, email: userEmail }
 
     // Bước 3: Cho phép cái request đi tiếp
     next()
