@@ -6,7 +6,6 @@ const Router = express.Router()
 
 // Get all dashboard data in one request
 Router.get('/', authMiddleware.isAuthorized, dashboardController.getAll)
-
 // Individual endpoints for each dashboard component
 Router.get('/summary', authMiddleware.isAuthorized, dashboardController.getSummary)
 Router.get('/domain_values', dashboardController.getValueDomain)

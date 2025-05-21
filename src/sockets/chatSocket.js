@@ -1,14 +1,14 @@
-const socketIO = require('socket.io')
+import socketIO from 'socket.io'
 import { chatModel } from '../models/chatModel'
-const { verifyToken } = require('../providers/JwtProvider')
-const { env } = require('../config/environment')
+import { JwtProvider } from '../providers/JwtProvider'
+import { env } from '../config/environment'
 
 /**
  * Socket.io Chat Implementation
  * This module handles real-time chat functionality between users and admins
  */
 
-const setupChatSocket = (server) => {
+export const setupChatSocket = (server) => {
   const io = socketIO(server, {
     cors: {
       origin: '*', // Update with your frontend URL in production
@@ -30,12 +30,13 @@ const setupChatSocket = (server) => {
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth.token
+      console.log('Socket token:', token)
       if (!token) {
         return next(new Error('Authentication error'))
       }
-
       // Use the ACCESS_TOKEN_SECRET_SIGNATURE from environment variables
-      const decoded = await verifyToken(token, env.ACCESS_TOKEN_SECRET_SIGNATURE)
+      const decoded = await JwtProvider.verifyToken(token, env.ACCESS_TOKEN_SECRET_SIGNATURE)
+      console.log('Decoded token:', decoded)
       if (!decoded) {
         return next(new Error('Invalid token'))
       }
@@ -97,10 +98,20 @@ const setupChatSocket = (server) => {
         console.error('Error joining chat:', error)
         socket.emit('error', { message: 'Error joining chat' })
       }
-    })// Handle sending a message
+    })
+
+    // Handle sending a message
     socket.on('send-message', async (data) => {
       try {
-        const { recipientId, message, attachments = [] } = data;
+        // Support both recipientId and recipientID
+        const recipientID = data.recipientID || data.recipientId;
+        const { message, attachments = [] } = data;
+
+        console.log('Send message request:', data);
+
+        if (!recipientID) {
+          return socket.emit('error', { message: 'Recipient ID is required' });
+        }
 
         // Record client IP if available
         const ipAddress = socket.handshake.address || null;
@@ -108,7 +119,7 @@ const setupChatSocket = (server) => {
         // Create and save the message
         const newMessage = await chatModel.createNew({
           senderID: socket.user.id,
-          recipientID: recipientId,
+          recipientID: recipientID,
           message,
           senderRole: socket.user.role,
           ipAddress,
@@ -120,15 +131,15 @@ const setupChatSocket = (server) => {
         // Construct room ID - we need to ensure consistent ordering for the room ID
         // to make sure both parties join the same room
         const roomId = socket.user.role === 'user'
-          ? `chat:${socket.user.id}_${recipientId}`
-          : `chat:${recipientId}_${socket.user.id}`;
+          ? `chat:${socket.user.id}_${recipientID}`
+          : `chat:${recipientID}_${socket.user.id}`;
 
         // Broadcast the message to the room
         io.to(roomId).emit('new-message', newMessage);
 
         // Send notification to offline recipient
         if (socket.user.role === 'user') {
-          const adminSocketId = connectedClients.admins.get(recipientId);
+          const adminSocketId = connectedClients.admins.get(recipientID);
           if (adminSocketId) {
             io.to(adminSocketId).emit('chat-notification', {
               from: socket.user.id,
@@ -136,7 +147,7 @@ const setupChatSocket = (server) => {
             });
           }
         } else {
-          const userSocketId = connectedClients.users.get(recipientId);
+          const userSocketId = connectedClients.users.get(recipientID);
           if (userSocketId) {
             io.to(userSocketId).emit('chat-notification', {
               from: socket.user.id,
@@ -148,7 +159,8 @@ const setupChatSocket = (server) => {
         console.error('Error sending message:', error);
         socket.emit('error', { message: 'Error sending message' });
       }
-    })    // Handle marking messages as read
+    })
+    // Handle marking messages as read
     socket.on('mark-as-read', async (data) => {
       try {
         const { recipientId } = data
@@ -217,6 +229,75 @@ const setupChatSocket = (server) => {
       }
     })
 
+    // Handle getting chat history
+    socket.on('get-chat-history', async (data) => {
+      try {
+        console.log('Get chat history request:', data)
+        const { recipientId } = data
+
+        if (!recipientId) {
+          return socket.emit('error', { message: 'Recipient ID is required' })
+        }
+
+        let messages = []
+
+        // If admin requesting chat with a user
+        if (socket.user.role === 'admin') {
+          console.log(`Admin ${socket.user.id} requesting chat history with user ${recipientId}`)
+          messages = await chatModel.findMessages(recipientId, socket.user.id)
+
+          // Make sure we're in the right room
+          const roomId = `chat:${recipientId}_${socket.user.id}`
+          socket.join(roomId)
+        }
+        // If user requesting chat with admin
+        else if (socket.user.role === 'user') {
+          console.log(`User ${socket.user.id} requesting chat history with admin ${recipientId}`)
+          messages = await chatModel.findMessages(socket.user.id, recipientId)
+
+          // Make sure we're in the right room
+          const roomId = `chat:${socket.user.id}_${recipientId}`
+          socket.join(roomId)
+        }
+
+        console.log(`Sending ${messages.length} messages to ${socket.id}`)
+        socket.emit('chat-history', messages)
+      } catch (error) {
+        console.error('Error getting chat history:', error)
+        socket.emit('error', { message: 'Error getting chat history' })
+      }
+    })
+
+    // Handle joining a chat with recipientId
+    socket.on('join-chat-room', async (data) => {
+      try {
+        console.log('Join chat room request:', data)
+        const { recipientId } = data
+
+        if (!recipientId) {
+          return socket.emit('error', { message: 'Recipient ID is required' })
+        }
+
+        let roomId = ''
+
+        // Admin joining chat with user
+        if (socket.user.role === 'admin') {
+          roomId = `chat:${recipientId}_${socket.user.id}`
+        }
+        // User joining chat with admin
+        else {
+          roomId = `chat:${socket.user.id}_${recipientId}`
+        }
+
+        console.log(`Socket ${socket.id} joining room ${roomId}`)
+        socket.join(roomId)
+        socket.emit('room-joined', { roomId })
+      } catch (error) {
+        console.error('Error joining chat room:', error)
+        socket.emit('error', { message: 'Error joining chat room' })
+      }
+    })
+
     // Handle disconnection
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`)
@@ -235,5 +316,3 @@ const setupChatSocket = (server) => {
 
   return io
 }
-
-module.exports = { setupChatSocket }

@@ -146,16 +146,32 @@ const _loginWithRole = async (req, res, next, requiredRole) => {
       throw new ApiError(StatusCodes.UNAUTHORIZED, 'Thông tin xác thực không hợp lệ')
     }
 
-    // Generate tokens
+    // Generate tokens - đơn giản hóa với một loại token duy nhất
     const payload = { id: user._id.toString(), email: user.email, role: user.role }
-    const accessToken = await JwtProvider.generateToken(payload, env.ACCESS_TOKEN_SECRET_SIGNATURE, env.ACCESS_TOKEN_LIFE)
-    const refreshToken = await JwtProvider.generateToken(payload, env.REFRESH_TOKEN_SECRET_SIGNATURE, env.REFRESH_TOKEN_LIFE)
-    const accessTokenName = requiredRole === 'admin' ? 'adminAccessToken' : 'accessToken'
-    const refreshTokenName = requiredRole === 'admin' ? 'adminRefreshToken' : 'refreshToken'
+    const accessToken = await JwtProvider.generateToken(
+      payload,
+      env.ACCESS_TOKEN_SECRET_SIGNATURE,
+      env.ACCESS_TOKEN_LIFE
+    )
+    const refreshToken = await JwtProvider.generateToken(
+      payload,
+      env.REFRESH_TOKEN_SECRET_SIGNATURE,
+      env.REFRESH_TOKEN_LIFE
+    )
 
-    // Set cookies
-    res.cookie(accessTokenName, accessToken, { httpOnly: true, secure: true, sameSite: 'none', maxAge: ms('14 days') })
-    res.cookie(refreshTokenName, refreshToken, { httpOnly: true, secure: true, sameSite: 'none', maxAge: ms('14 days') })
+    // Set cookies - không phân biệt admin hay user
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: ms('14 days')
+    })
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: ms('14 days')
+    })
 
     // Prepare user data for response
     const userData = {
@@ -181,17 +197,9 @@ const _loginWithRole = async (req, res, next, requiredRole) => {
  */
 const logout = async (req, res, next) => {
   try {
-    // The role can be determined from the token or from the route
-    const isAdmin = req.originalUrl.includes('/admin')
-
-    // Clear the appropriate cookies
-    if (isAdmin) {
-      res.clearCookie('adminAccessToken')
-      res.clearCookie('adminRefreshToken')
-    } else {
-      res.clearCookie('accessToken')
-      res.clearCookie('refreshToken')
-    }
+    // Đơn giản hóa - không cần phân biệt admin hay user
+    res.clearCookie('accessToken')
+    res.clearCookie('refreshToken')
 
     res.status(StatusCodes.OK).json({ success: true, loggedOut: true })
   } catch (error) { next(error) }
@@ -202,12 +210,8 @@ const logout = async (req, res, next) => {
  */
 const refreshToken = async (req, res, next) => {
   try {
-    // Determine which refresh token to use based on route
-    const isAdmin = req.originalUrl.includes('/admin')
-    const refreshTokenName = isAdmin ? 'adminRefreshToken' : 'refreshToken'
-    const accessTokenName = isAdmin ? 'adminAccessToken' : 'accessToken'
-
-    const refreshToken = req.cookies?.[refreshTokenName]
+    // Đơn giản hóa - không phân biệt admin hay user
+    const refreshToken = req.cookies?.refreshToken
     if (!refreshToken) {
       throw new ApiError(StatusCodes.UNAUTHORIZED, 'Refresh token not found')
     }
@@ -223,7 +227,7 @@ const refreshToken = async (req, res, next) => {
     )
 
     // Set new access token cookie
-    res.cookie(accessTokenName, accessToken, {
+    res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
@@ -238,7 +242,6 @@ const refreshToken = async (req, res, next) => {
     next(new ApiError(StatusCodes.UNAUTHORIZED, 'Please sign in again'))
   }
 }
-
 /**
  * Update user profile
  */
