@@ -41,4 +41,10 @@ Router.post('/messages',
   chatController.sendMessage
 )
 
+// Special endpoint for user-admin chat on client side
+Router.get('/messages/admin/:userId',
+  authMiddleware.isAuthorized,
+  chatController.getUserAdminMessages
+)
+
 export const chatRoutes = Router

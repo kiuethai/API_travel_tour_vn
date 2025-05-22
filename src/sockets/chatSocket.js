@@ -30,17 +30,17 @@ export const setupChatSocket = (server) => {
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth.token
-      console.log('Socket token:', token)
+      console.log('Socket token test socket:', token)
       if (!token) {
         return next(new Error('Authentication error'))
       }
       // Use the ACCESS_TOKEN_SECRET_SIGNATURE from environment variables
       const decoded = await JwtProvider.verifyToken(token, env.ACCESS_TOKEN_SECRET_SIGNATURE)
       console.log('Decoded token:', decoded)
+
       if (!decoded) {
         return next(new Error('Invalid token'))
       }
-
       // Save the user/admin info in the socket
       socket.user = {
         id: decoded.id,
@@ -169,16 +169,26 @@ export const setupChatSocket = (server) => {
         let filter = {}
         if (socket.user.role === 'admin') {
           filter = {
-            senderID: recipientId,
-            recipientID: socket.user.id,
-            senderRole: 'user', // Admin is reading user messages
-            readStatus: false
+            $or: [
+              {
+                senderID: recipientId,
+                recipientID: socket.user.id,
+                senderRole: 'user',
+                readStatus: false
+              },
+              {
+                senderID: recipientId,
+                recipientID: 'admin', // Trường hợp tin nhắn gửi đến 'admin'
+                senderRole: 'user',
+                readStatus: false
+              }
+            ]
           }
         } else {
           filter = {
             senderID: recipientId,
             recipientID: socket.user.id,
-            senderRole: 'admin', // User is reading admin messages
+            senderRole: 'admin',
             readStatus: false
           }
         }

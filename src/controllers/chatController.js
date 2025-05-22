@@ -34,7 +34,7 @@ const getMessages = async (req, res, next) => {
         messages
       })
     }
-    
+
     // Cách xử lý hiện tại nếu không phải admin
     const adminId = req.user.id
     const messages = await chatModel.findMessages(userId, adminId)
@@ -121,11 +121,37 @@ const sendMessage = async (req, res, next) => {
   }
 }
 
+/**
+ * Get all messages between a user and any admin
+ * This is specifically for the client chat interface
+ */
+const getUserAdminMessages = async (req, res, next) => {
+  try {
+    const { userId } = req.params
+
+    // Ensure the requesting user is only getting their own messages
+    if (req.user.id !== userId && req.user.role !== 'admin') {
+      return next(new ApiError(403, 'Not authorized to access these messages'))
+    }
+
+    // Get all messages between this user and any admin
+    const messages = await chatModel.findMessagesWithAdmin(userId)
+    res.json({
+      success: true,
+      messages
+    })
+  } catch (error) {
+    // Use next with error instead of console.error
+    next(new ApiError(500, 'Error fetching admin messages'))
+  }
+}
+
 export const chatController = {
   getAdminConversations,
   getMessages,
   getUserConversations,
   getUserMessages,
-  sendMessage
+  sendMessage,
+  getUserAdminMessages
 }
 

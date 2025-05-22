@@ -56,7 +56,8 @@ const findMessages = async (userId, adminId) => {
           $or: [
             // Tất cả tin nhắn giữa user và bất kỳ admin nào
             { senderID: userId, senderRole: 'user' },
-            { recipientID: userId, senderRole: 'admin' }
+            { recipientID: userId, senderRole: 'admin' },
+            { senderID: userId, recipientID: 'admin', senderRole: 'user' }
           ]
         })
         .sort({ createdDate: 1 })
@@ -68,7 +69,8 @@ const findMessages = async (userId, adminId) => {
         .find({
           $or: [
             { senderID: userId, recipientID: adminId },
-            { senderID: adminId, recipientID: userId }
+            { senderID: adminId, recipientID: userId },
+            { senderID: userId, recipientID: 'admin', senderRole: 'user' }
           ]
         })
         .sort({ createdDate: 1 })
@@ -253,7 +255,31 @@ const createIndexes = async () => {
     }
   }
 }
-
+const findMessagesWithAdmin = async (userId) => {
+  try {
+    const result = await GET_DB().collection(CHAT_COLLECTION_NAME)
+      .find({
+        $or: [
+          // Tin nhắn từ user đến admin (cả ID cụ thể và 'admin')
+          {
+            senderID: userId,
+            senderRole: 'user',
+            $or: [
+              { recipientID: { $regex: /^[0-9a-f]{24}$/ } }, // ID MongoDB hợp lệ
+              { recipientID: 'admin' } // Chuỗi 'admin'
+            ]
+          },
+          // Tin nhắn từ admin đến user
+          { recipientID: userId, senderRole: 'admin' }
+        ]
+      })
+      .sort({ createdDate: 1 })
+      .toArray()
+    return result
+  } catch (error) {
+    throw new Error(error)
+  }
+}
 // Try to create indexes when this module is imported
 createIndexes().catch(() => { })
 
@@ -265,5 +291,6 @@ export const chatModel = {
   getAdminConversations,
   getUserConversations,
   markAsRead,
-  findAllUserMessages
+  findAllUserMessages,
+  findMessagesWithAdmin
 }
