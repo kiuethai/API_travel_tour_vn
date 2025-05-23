@@ -7,7 +7,7 @@ import ApiError from '~/utils/ApiError'
 const isAuthorized = async (req, res, next) => {
   // Đơn giản hóa: dùng chung một tên token
   let token = req.cookies?.accessToken
-  console.log('🚀 ~ isAuthorized ~ token:', token)
+  // console.log('🚀 ~ isAuthorized ~ token:', token)
 
   // Fallback to Authorization header Bearer token
   if (!token) {
