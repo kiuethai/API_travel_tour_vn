@@ -101,18 +101,28 @@ const recommendTours = async (req, res, next) => {
   try {
     // Try to decode token from cookies to get userId
     const token = req.cookies?.accessToken || req.cookies?.adminAccessToken
+    // console.log('🚀 ~ recommendTours ~ token:', token)
     let userId
 
     if (token) {
       try {
         const decoded = await JwtProvider.verifyToken(token, env.ACCESS_TOKEN_SECRET_SIGNATURE)
-        userId = decoded._id
-      } catch {
+        // Kiểm tra cả hai trường hợp để đảm bảo tính tương thích
+        userId = decoded.id
+        console.log('🚀 ~ recommendTours ~ decoded:', decoded) // Thêm log này để debug
+      } catch (error) {
+        console.log('🚀 ~ recommendTours ~ token error:', error.message)
         userId = null
       }
     }
     const { clickedTourId, search } = req.query
-    const recommendations = await recommendService.getRecommendations({ userId, clickedTourId, searchQuery: search })
+    // console.log('🚀 ~ recommendTours ~ req.query:', req.query)
+    const recommendations = await recommendService.getRecommendations({
+      userId,
+      clickedTourId,
+      search: search
+    })
+
 
 
     const recommendationsfull = await Promise.all(

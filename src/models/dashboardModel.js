@@ -95,7 +95,7 @@ const getMostTourBooked = async () => {
       { $match: { _destroy: false } },
       { $group: { _id: '$tourId', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
-      { $limit: 5 }
+      { $limit: 8 }
     ]).toArray()
 
     // Get tour details for each of the most booked tours

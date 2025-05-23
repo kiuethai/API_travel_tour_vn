@@ -13,7 +13,8 @@ const cosine = (v1, v2) => {
   return dot / (mag(v1) * mag(v2) + 1e-8)
 }
 
-const getRecommendations = async ({ userId, clickedTourId, searchQuery }) => {
+const getRecommendations = async ({ userId, clickedTourId, search }) => {
+  console.log('🚀 ~ getRecommendations params:', { userId, clickedTourId, search })
   // If user not logged in or no context, return top booked tours
   if (!userId) {
     const topBookings = await dashboardModel.getMostTourBooked()
@@ -33,7 +34,7 @@ const getRecommendations = async ({ userId, clickedTourId, searchQuery }) => {
     const title = (tour.title || '').toLowerCase()
     const desc = (tour.description || '').toLowerCase()
     const doc = [
-      ...Array(3).fill(title),      // boost title
+      ...Array(3).fill(title),// boost title
       desc
     ].join(' ')
     // bạn có thể tokenizer và remove stop-words ở đây nếu cần
@@ -63,10 +64,10 @@ const getRecommendations = async ({ userId, clickedTourId, searchQuery }) => {
     }
   }
   // Context: search query
-  else if (searchQuery) {
+  else if (search) {
     // Convert query thành vector TF-IDF so sánh với docs
-    const queryDoc = searchQuery.toLowerCase()
-    tfidf.addDocument(queryDoc)  // thêm ở cuối, index = allTours.length
+    const queryDoc = search.toLowerCase()
+    tfidf.addDocument(queryDoc) // thêm ở cuối, index = allTours.length
     const vq = getVector(allTours.length)
     allTours.forEach((tour, i) => {
       const vi = getVector(i)

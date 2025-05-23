@@ -8,6 +8,7 @@ import { env } from '~/config/environment'
 import { CloudinaryProvider } from '~/providers/CloudinaryProvider'
 import { BrevoProvider } from '~/providers/BrevoProvider'
 import { v4 as uuidv4 } from 'uuid'
+import { userService } from '~/services/userService'
 
 /**
  * Create a new user (either regular user or admin based on role)
@@ -338,39 +339,8 @@ const updateById = async (req, res, next) => {
  */
 const requestPasswordReset = async (req, res, next) => {
   try {
-    const { email } = req.body
-
-    // Find user by email
-    const user = await mergedUserModel.findOneByEmail(email)
-    if (!user) {
-      // For security reasons, don't reveal if email exists
-      return res.status(StatusCodes.OK).json({
-        success: true,
-        message: 'If your email is registered, you will receive a password reset link'
-      })
-    }
-
-    // Generate reset token
-    const resetToken = uuidv4()
-
-    // Update user with reset token
-    await mergedUserModel.update(user._id.toString(), {
-      verifyToken: resetToken
-    })
-
-    // Send reset email
-    const resetLink = `${env.CLIENT_URL}/reset-password?email=${email}&token=${resetToken}`
-
-    try {
-      await BrevoProvider.sendPasswordResetEmail(email, resetLink)
-    } catch (error) {
-      console.error('Error sending password reset email:', error)
-    }
-
-    res.status(StatusCodes.OK).json({
-      success: true,
-      message: 'If your email is registered, you will receive a password reset link'
-    })
+    const result = await userService.requestPasswordReset(req.body.email)
+    res.status(StatusCodes.OK).json(result)
   } catch (error) { next(error) }
 }
 
@@ -379,28 +349,8 @@ const requestPasswordReset = async (req, res, next) => {
  */
 const resetPassword = async (req, res, next) => {
   try {
-    const { email, token, newPassword } = req.body
-
-    // Find user by email
-    const user = await mergedUserModel.findOneByEmail(email)
-    if (!user || user.verifyToken !== token) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid reset request')
-    }
-
-    // Hash new password
-    const salt = await bcrypt.genSalt(10)
-    const hashedPassword = await bcrypt.hash(newPassword, salt)
-
-    // Update user with new password
-    await mergedUserModel.update(user._id.toString(), {
-      password: hashedPassword,
-      verifyToken: null
-    })
-
-    res.status(StatusCodes.OK).json({
-      success: true,
-      message: 'Password reset successful'
-    })
+    const result = await userService.resetPassword(req.body)
+    res.status(StatusCodes.OK).json(result)
   } catch (error) { next(error) }
 }
 
