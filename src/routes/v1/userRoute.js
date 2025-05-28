@@ -15,6 +15,9 @@ Router.route('/verify')
 Router.route('/login')
   .post(mergedUserValidation.login, mergedUserController.loginUser)
 
+Router.route('/login-google')
+  .post(mergedUserController.loginWithGoogle)
+
 Router.route('/logout')
   .delete(mergedUserController.logout)
 

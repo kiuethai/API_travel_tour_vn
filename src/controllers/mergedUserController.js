@@ -388,6 +388,35 @@ const getAllUsers = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+/**
+ * Handle Google OAuth login
+ */
+const loginWithGoogle = async (req, res, next) => {
+  try {
+    // Call the userService loginWithGoogle function
+    const result = await userService.loginWithGoogle(req.body)
+
+    // Set cookies for authentication
+    res.cookie('accessToken', result.accessToken, {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: ms('14 days')
+    })
+
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: ms('14 days')
+    })
+
+    return res.status(StatusCodes.OK).json(result)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const mergedUserController = {
   createNew,
   verifyAccount,
@@ -399,5 +428,6 @@ export const mergedUserController = {
   updateById,
   requestPasswordReset,
   resetPassword,
-  getAllUsers
+  getAllUsers,
+  loginWithGoogle
 }

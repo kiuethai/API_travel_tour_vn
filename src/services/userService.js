@@ -315,6 +315,60 @@ const getAllUsers = async () => {
   }
 }
 
+const loginWithGoogle = async (reqBody) => {
+  try {
+    // Get the Google credential JWT token
+    const { credential } = reqBody
+
+    if (!credential) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Google credential is required')
+    }
+
+    // Use the JwtProvider's handleGoogleAuth function to validate the token and get/create a user
+    const result = await JwtProvider.handleGoogleAuth(credential)
+    console.log('result', result)
+    // Extract user from the result
+    const { user, isNewUser } = result
+
+    // Create our own JWT tokens for the application
+    const userInfo = {
+      _id: user._id,
+      email: user.email,
+      role: user.role || 'user'
+    }
+
+    const accessToken = await JwtProvider.generateToken(
+      userInfo,
+      env.ACCESS_TOKEN_SECRET_SIGNATURE,
+      env.ACCESS_TOKEN_LIFE
+    )
+
+    const refreshToken = await JwtProvider.generateToken(
+      userInfo,
+      env.REFRESH_TOKEN_SECRET_SIGNATURE,
+      env.REFRESH_TOKEN_LIFE
+    )
+
+    // Return user info and tokens
+    return {
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        displayName: user.displayName,
+        avatar: user.avatar,
+        role: user.role || 'user'
+      },
+      accessToken,
+      refreshToken,
+      isNewUser // Keep this additional field
+    }
+  } catch (error) {
+    console.error('Google login error:', error.message)
+    throw error
+  }
+}
+
 export const userService = {
   createNew,
   verifyAccount,
@@ -324,5 +378,6 @@ export const userService = {
   updateById,
   requestPasswordReset,
   resetPassword,
-  getAllUsers
+  getAllUsers,
+  loginWithGoogle
 }
