@@ -13,7 +13,21 @@ const cosine = (v1, v2) => {
   return dot / (mag(v1) * mag(v2) + 1e-8)
 }
 
-const getRecommendations = async ({ userId, clickedTourId, searchQuery }) => {
+const boostSameRegion = (sourceTour, scoredTours, boostFactor = 0.2) => {
+  // Nếu tour gốc không có domain, không thực hiện tăng điểm
+  if (!sourceTour || !sourceTour.domain) return scoredTours
+
+  return scoredTours.map(item => {
+    if (item.tour.domain === sourceTour.domain) {
+      // Tăng điểm cho tours cùng miền
+      return { ...item, score: item.score + boostFactor }
+    }
+    return item
+  })
+}
+
+const getRecommendations = async ({ userId, clickedTourId, search }) => {
+  // console.log('🚀 ~ getRecommendations params:', { userId, clickedTourId, search })
   // If user not logged in or no context, return top booked tours
   if (!userId) {
     const topBookings = await dashboardModel.getMostTourBooked()
@@ -32,11 +46,19 @@ const getRecommendations = async ({ userId, clickedTourId, searchQuery }) => {
   allTours.forEach(tour => {
     const title = (tour.title || '').toLowerCase()
     const desc = (tour.description || '').toLowerCase()
+    // Thêm domain vào nội dung để tăng matching theo miền
+    const domain = tour.domain ?
+      (tour.domain === 'b' ? 'miền bắc' :
+        tour.domain === 't' ? 'miền trung' :
+          tour.domain === 'n' ? 'miền nam' : '') : ''
+
     const doc = [
-      ...Array(3).fill(title),      // boost title
+      // boost title
+      ...Array(2).fill(domain),
+      ...Array(3).fill(title), // boost domain
       desc
     ].join(' ')
-    // bạn có thể tokenizer và remove stop-words ở đây nếu cần
+
     tfidf.addDocument(doc)
   })
 
@@ -49,10 +71,13 @@ const getRecommendations = async ({ userId, clickedTourId, searchQuery }) => {
   }
 
   let scores = []
+  let sourceTour = null
+
   // Context: clicked tour
   if (clickedTourId) {
     const i0 = allTours.findIndex(t => t._id.toString() === clickedTourId)
     if (i0 >= 0) {
+      sourceTour = allTours[i0]
       const v0 = getVector(i0)
       allTours.forEach((tour, i) => {
         if (i !== i0) {
@@ -63,15 +88,45 @@ const getRecommendations = async ({ userId, clickedTourId, searchQuery }) => {
     }
   }
   // Context: search query
-  else if (searchQuery) {
+  else if (search) {
+    // Kiểm tra xem search có chứa tên miền không
+    const lowerSearch = search.toLowerCase()
+    const domainMatch = {
+      'miền bắc': 'b',
+      'miền trung': 't',
+      'miền nam': 'n',
+      'bắc': 'b',
+      'trung': 't',
+      'nam': 'n'
+    }
+
+    // Tạo tour ảo chứa domain từ search query
+    let virtualDomain = null
+    for (const [key, value] of Object.entries(domainMatch)) {
+      if (lowerSearch.includes(key)) {
+        virtualDomain = value
+        break
+      }
+    }
+
     // Convert query thành vector TF-IDF so sánh với docs
-    const queryDoc = searchQuery.toLowerCase()
-    tfidf.addDocument(queryDoc)  // thêm ở cuối, index = allTours.length
+    const queryDoc = search.toLowerCase()
+    tfidf.addDocument(queryDoc) // thêm ở cuối, index = allTours.length
     const vq = getVector(allTours.length)
     allTours.forEach((tour, i) => {
       const vi = getVector(i)
       scores.push({ tour, score: cosine(vq, vi) })
     })
+
+    // Nếu tìm thấy domain trong search query, tạo tour ảo để boost miền
+    if (virtualDomain) {
+      sourceTour = { domain: virtualDomain }
+    }
+  }
+
+  // Tăng điểm cho các tour cùng miền với tour nguồn
+  if (sourceTour) {
+    scores = boostSameRegion(sourceTour, scores, 0.3) // Tăng 30% điểm nếu cùng miền
   }
 
   // Sort và trả về top 5

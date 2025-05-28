@@ -227,15 +227,32 @@ const requestPasswordReset = async (email) => {
 
     // Tạo link reset password
     const resetLink = `${WEBSITE_DOMAIN}/account/reset-password?email=${email}&token=${resetToken}`
-    const customSubject = 'KTTravel: Yêu cầu đặt lại mật khẩu của bạn'
+    const customSubject = 'Vietnam Travel Tours: Đặt lại mật khẩu của bạn'
     const htmlContent = `
-      <h3>Xin chào,</h3>
-      <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.</p>
-      <p>Nhấp vào liên kết dưới đây để đặt lại mật khẩu:</p>
-      <h3><a href="${resetLink}">Đặt lại mật khẩu</a></h3>
-      <p>Hoặc sao chép liên kết này: ${resetLink}</p>
-      <p>Liên kết này sẽ hết hạn sau 24 giờ.</p>
-      <h3>Trân trọng,<br/> - Kiuethai - Một Lập Trình Viên - </h3>
+      <div style="font-family: Arial, sans-serif; background: #f6f8fa; padding: 24px;">
+        <div style="max-width: 500px; margin: auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 32px;">
+          <div style="text-align:center; margin-bottom: 24px;">
+            <img src="https://res.cloudinary.com/dbkhjufja/image/upload/v1746778897/aycgbvnmphrhmddyjfuw.png" alt="Travel" width="64" />
+            <h2 style="color: #2d8fdd; margin: 16px 0 8px;">Vietnam Travel Tours</h2>
+            <p style="color: #555; font-size: 16px;">Đặt lại mật khẩu tài khoản của bạn</p>
+          </div>
+          <div style="font-size: 16px; color: #333; margin-bottom: 24px;">
+            <p>Xin chào <b>${email}</b>,</p>
+            <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Vui lòng nhấn vào nút bên dưới để đặt lại mật khẩu:</p>
+            <div style="text-align:center; margin: 32px 0;">
+              <a href="${resetLink}" style="background: #2d8fdd; color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 18px; display: inline-block;">
+                Đặt lại mật khẩu
+              </a>
+            </div> 
+            <p>Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này hoặc liên hệ với chúng tôi nếu bạn có thắc mắc.</p>
+          </div>
+          <div style="margin-top: 32px; text-align: center; color: #888; font-size: 14px;">
+            <em>Vietnam Travel Tours - Kết nối hành trình, khám phá Việt Nam!</em>
+            <br/>
+            <span style="font-size:12px;">Liên kết này sẽ hết hạn sau 24 giờ.</span>
+          </div>
+        </div>
+      </div>
     `
 
     // Gọi provider gửi email
@@ -298,6 +315,60 @@ const getAllUsers = async () => {
   }
 }
 
+const loginWithGoogle = async (reqBody) => {
+  try {
+    // Get the Google credential JWT token
+    const { credential } = reqBody
+
+    if (!credential) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Google credential is required')
+    }
+
+    // Use the JwtProvider's handleGoogleAuth function to validate the token and get/create a user
+    const result = await JwtProvider.handleGoogleAuth(credential)
+    console.log('result', result)
+    // Extract user from the result
+    const { user, isNewUser } = result
+
+    // Create our own JWT tokens for the application
+    const userInfo = {
+      _id: user._id,
+      email: user.email,
+      role: user.role || 'user'
+    }
+
+    const accessToken = await JwtProvider.generateToken(
+      userInfo,
+      env.ACCESS_TOKEN_SECRET_SIGNATURE,
+      env.ACCESS_TOKEN_LIFE
+    )
+
+    const refreshToken = await JwtProvider.generateToken(
+      userInfo,
+      env.REFRESH_TOKEN_SECRET_SIGNATURE,
+      env.REFRESH_TOKEN_LIFE
+    )
+
+    // Return user info and tokens
+    return {
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        displayName: user.displayName,
+        avatar: user.avatar,
+        role: user.role || 'user'
+      },
+      accessToken,
+      refreshToken,
+      isNewUser // Keep this additional field
+    }
+  } catch (error) {
+    console.error('Google login error:', error.message)
+    throw error
+  }
+}
+
 export const userService = {
   createNew,
   verifyAccount,
@@ -307,5 +378,6 @@ export const userService = {
   updateById,
   requestPasswordReset,
   resetPassword,
-  getAllUsers
+  getAllUsers,
+  loginWithGoogle
 }

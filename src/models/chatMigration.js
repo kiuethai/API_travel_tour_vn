@@ -44,9 +44,9 @@ const migrateChatMessages = async () => {
               senderRole
             },
             $unset: {
-              userID: " ",
-              adminID: "",
-              sender: ""
+              userID: '',
+              adminID: '',
+              sender: ''
             }
           }
         )

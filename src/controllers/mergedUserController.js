@@ -8,6 +8,7 @@ import { env } from '~/config/environment'
 import { CloudinaryProvider } from '~/providers/CloudinaryProvider'
 import { BrevoProvider } from '~/providers/BrevoProvider'
 import { v4 as uuidv4 } from 'uuid'
+import { userService } from '~/services/userService'
 
 /**
  * Create a new user (either regular user or admin based on role)
@@ -146,16 +147,32 @@ const _loginWithRole = async (req, res, next, requiredRole) => {
       throw new ApiError(StatusCodes.UNAUTHORIZED, 'Thông tin xác thực không hợp lệ')
     }
 
-    // Generate tokens
+    // Generate tokens - đơn giản hóa với một loại token duy nhất
     const payload = { id: user._id.toString(), email: user.email, role: user.role }
-    const accessToken = await JwtProvider.generateToken(payload, env.ACCESS_TOKEN_SECRET_SIGNATURE, env.ACCESS_TOKEN_LIFE)
-    const refreshToken = await JwtProvider.generateToken(payload, env.REFRESH_TOKEN_SECRET_SIGNATURE, env.REFRESH_TOKEN_LIFE)
-    const accessTokenName = requiredRole === 'admin' ? 'adminAccessToken' : 'accessToken'
-    const refreshTokenName = requiredRole === 'admin' ? 'adminRefreshToken' : 'refreshToken'
+    const accessToken = await JwtProvider.generateToken(
+      payload,
+      env.ACCESS_TOKEN_SECRET_SIGNATURE,
+      env.ACCESS_TOKEN_LIFE
+    )
+    const refreshToken = await JwtProvider.generateToken(
+      payload,
+      env.REFRESH_TOKEN_SECRET_SIGNATURE,
+      env.REFRESH_TOKEN_LIFE
+    )
 
-    // Set cookies
-    res.cookie(accessTokenName, accessToken, { httpOnly: true, secure: true, sameSite: 'none', maxAge: ms('14 days') })
-    res.cookie(refreshTokenName, refreshToken, { httpOnly: true, secure: true, sameSite: 'none', maxAge: ms('14 days') })
+    // Set cookies - không phân biệt admin hay user
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: ms('14 days')
+    })
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: ms('14 days')
+    })
 
     // Prepare user data for response
     const userData = {
@@ -181,17 +198,9 @@ const _loginWithRole = async (req, res, next, requiredRole) => {
  */
 const logout = async (req, res, next) => {
   try {
-    // The role can be determined from the token or from the route
-    const isAdmin = req.originalUrl.includes('/admin')
-
-    // Clear the appropriate cookies
-    if (isAdmin) {
-      res.clearCookie('adminAccessToken')
-      res.clearCookie('adminRefreshToken')
-    } else {
-      res.clearCookie('accessToken')
-      res.clearCookie('refreshToken')
-    }
+    // Đơn giản hóa - không cần phân biệt admin hay user
+    res.clearCookie('accessToken')
+    res.clearCookie('refreshToken')
 
     res.status(StatusCodes.OK).json({ success: true, loggedOut: true })
   } catch (error) { next(error) }
@@ -202,12 +211,8 @@ const logout = async (req, res, next) => {
  */
 const refreshToken = async (req, res, next) => {
   try {
-    // Determine which refresh token to use based on route
-    const isAdmin = req.originalUrl.includes('/admin')
-    const refreshTokenName = isAdmin ? 'adminRefreshToken' : 'refreshToken'
-    const accessTokenName = isAdmin ? 'adminAccessToken' : 'accessToken'
-
-    const refreshToken = req.cookies?.[refreshTokenName]
+    // Đơn giản hóa - không phân biệt admin hay user
+    const refreshToken = req.cookies?.refreshToken
     if (!refreshToken) {
       throw new ApiError(StatusCodes.UNAUTHORIZED, 'Refresh token not found')
     }
@@ -223,7 +228,7 @@ const refreshToken = async (req, res, next) => {
     )
 
     // Set new access token cookie
-    res.cookie(accessTokenName, accessToken, {
+    res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
@@ -238,7 +243,6 @@ const refreshToken = async (req, res, next) => {
     next(new ApiError(StatusCodes.UNAUTHORIZED, 'Please sign in again'))
   }
 }
-
 /**
  * Update user profile
  */
@@ -335,39 +339,8 @@ const updateById = async (req, res, next) => {
  */
 const requestPasswordReset = async (req, res, next) => {
   try {
-    const { email } = req.body
-
-    // Find user by email
-    const user = await mergedUserModel.findOneByEmail(email)
-    if (!user) {
-      // For security reasons, don't reveal if email exists
-      return res.status(StatusCodes.OK).json({
-        success: true,
-        message: 'If your email is registered, you will receive a password reset link'
-      })
-    }
-
-    // Generate reset token
-    const resetToken = uuidv4()
-
-    // Update user with reset token
-    await mergedUserModel.update(user._id.toString(), {
-      verifyToken: resetToken
-    })
-
-    // Send reset email
-    const resetLink = `${env.CLIENT_URL}/reset-password?email=${email}&token=${resetToken}`
-
-    try {
-      await BrevoProvider.sendPasswordResetEmail(email, resetLink)
-    } catch (error) {
-      console.error('Error sending password reset email:', error)
-    }
-
-    res.status(StatusCodes.OK).json({
-      success: true,
-      message: 'If your email is registered, you will receive a password reset link'
-    })
+    const result = await userService.requestPasswordReset(req.body.email)
+    res.status(StatusCodes.OK).json(result)
   } catch (error) { next(error) }
 }
 
@@ -376,28 +349,8 @@ const requestPasswordReset = async (req, res, next) => {
  */
 const resetPassword = async (req, res, next) => {
   try {
-    const { email, token, newPassword } = req.body
-
-    // Find user by email
-    const user = await mergedUserModel.findOneByEmail(email)
-    if (!user || user.verifyToken !== token) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid reset request')
-    }
-
-    // Hash new password
-    const salt = await bcrypt.genSalt(10)
-    const hashedPassword = await bcrypt.hash(newPassword, salt)
-
-    // Update user with new password
-    await mergedUserModel.update(user._id.toString(), {
-      password: hashedPassword,
-      verifyToken: null
-    })
-
-    res.status(StatusCodes.OK).json({
-      success: true,
-      message: 'Password reset successful'
-    })
+    const result = await userService.resetPassword(req.body)
+    res.status(StatusCodes.OK).json(result)
   } catch (error) { next(error) }
 }
 
@@ -435,6 +388,35 @@ const getAllUsers = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+/**
+ * Handle Google OAuth login
+ */
+const loginWithGoogle = async (req, res, next) => {
+  try {
+    // Call the userService loginWithGoogle function
+    const result = await userService.loginWithGoogle(req.body)
+
+    // Set cookies for authentication
+    res.cookie('accessToken', result.accessToken, {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: ms('14 days')
+    })
+
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: ms('14 days')
+    })
+
+    return res.status(StatusCodes.OK).json(result)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const mergedUserController = {
   createNew,
   verifyAccount,
@@ -446,5 +428,6 @@ export const mergedUserController = {
   updateById,
   requestPasswordReset,
   resetPassword,
-  getAllUsers
+  getAllUsers,
+  loginWithGoogle
 }

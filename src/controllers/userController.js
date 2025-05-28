@@ -112,6 +112,29 @@ const getAllUsers = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+const loginWithGoogle = async (req, res, next) => {
+  try {
+    const result = await userService.loginWithGoogle(req.body)
+
+    // Set cookies just like in the regular login
+    res.cookie('accessToken', result.accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: ms('14 days')
+    })
+
+    res.cookie('refreshToken', result.accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: ms('14 days')
+    })
+
+    res.status(StatusCodes.OK).json(result)
+  } catch (error) { next(error) }
+}
+
 export const userController = {
   createNew,
   verifyAccount,
@@ -122,5 +145,6 @@ export const userController = {
   updateById,
   requestPasswordReset,
   resetPassword,
-  getAllUsers
+  getAllUsers,
+  loginWithGoogle
 }

@@ -9,9 +9,9 @@ const addReview = async ({ tourId, userId, rating, comment }) => {
   // Kiểm tra tour đã hoàn thành chưa
   const tour = await tourModel.findOneById(tourId)
   if (!tour) throw new ApiError(StatusCodes.NOT_FOUND, 'Tour không tồn tại')
-  if (tour.availability !== false) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Hãy tham gia cùng chúng tôi để cảm nhận vẻ đẹp của tour này')
-  }
+  // if (tour.availability !== false) {
+  //   throw new ApiError(StatusCodes.BAD_REQUEST, 'Hãy tham gia cùng chúng tôi để cảm nhận vẻ đẹp của tour này')
+  // }
 
   const bookings = await bookingModel.findOne({
     tourId: tourId,
